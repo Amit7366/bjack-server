@@ -23,6 +23,11 @@ import { ReferralModel } from '../Referral/referral.model';
 import { Types } from 'mongoose';
 import { GameTxnRecord } from '../GameTxnRecords/models/GameTxnRecord';
 import { GameTxnRecordBackup } from '../GameTxnRecords/models/gameTxnRecordBackup.model';
+import { AutoPaySms } from '../AutoPay/autopaySms.model';
+import {
+  smsMatchesPaymentMethod,
+  type AutoPayPaymentMethod,
+} from '../AutoPay/matchPaymentProvider';
 
 // dayjs tz setup (needed for .tz(...) usage)
 dayjs.extend(utc);
@@ -871,6 +876,150 @@ const updateStoreDbBalanceService = async (userId: string, newAmount: number) =>
   };
 };
 
+const normalizeTrxId = (value: string) => value.trim().toUpperCase();
+
+const amountsMatch = (smsAmount: number, expected: number) =>
+  Math.abs(Number(smsAmount) - Number(expected)) < 0.01;
+
+/** Match pending deposit against PipraPay SMS (amount + TrxID/TxnID). */
+const verifyAutoPayDeposit = async (
+  userObjectId: string,
+  input: {
+    depositTransactionId: string;
+    amount: number;
+    transactionId: string;
+    paymentMethod: AutoPayPaymentMethod;
+  }
+) => {
+  const { depositTransactionId, amount, transactionId, paymentMethod } = input;
+
+  if (!Types.ObjectId.isValid(depositTransactionId)) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid deposit transaction id');
+  }
+
+  const trx = await Transaction.findById(depositTransactionId);
+  if (!trx || trx.transactionType !== 'deposit') {
+    throw new AppError(httpStatus.NOT_FOUND, 'Deposit transaction not found');
+  }
+
+  if (String(trx.userId) !== String(userObjectId)) {
+    throw new AppError(httpStatus.FORBIDDEN, 'Not allowed to verify this deposit');
+  }
+
+  if (trx.status === 'success') {
+    const balance = await UserBalance.findOne({ userId: trx.userId }).lean();
+    return {
+      matched: true,
+      status: 'success' as const,
+      transaction: trx,
+      currentBalance: balance?.currentBalance ?? 0,
+    };
+  }
+
+  if (trx.status === 'failed') {
+    return { matched: false, status: 'failed' as const, transaction: trx };
+  }
+
+  const expectedTrxId = normalizeTrxId(transactionId);
+  const storedTrxId = normalizeTrxId(trx.transactionId);
+  if (expectedTrxId !== storedTrxId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Transaction ID does not match deposit record');
+  }
+
+  if (!amountsMatch(trx.amount, amount)) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Amount does not match deposit record');
+  }
+
+  if (trx.paymentMethod !== paymentMethod) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'Payment method does not match deposit record'
+    );
+  }
+
+  const smsCandidates = await AutoPaySms.find({
+    trxid: expectedTrxId,
+    status: { $ne: 'verified' },
+  })
+    .sort({ receivedAt: -1 })
+    .lean();
+
+  const sms = smsCandidates.find(
+    (row) =>
+      amountsMatch(row.amount, amount) &&
+      smsMatchesPaymentMethod(row, paymentMethod)
+  );
+
+  if (!sms) {
+    return { matched: false, status: 'pending' as const, transaction: trx };
+  }
+
+  const reserved = await AutoPaySms.findOneAndUpdate(
+    {
+      _id: sms._id,
+      status: { $ne: 'verified' },
+      trxid: expectedTrxId,
+    },
+    {
+      $set: {
+        status: 'verified',
+        matchedTransactionId: trx._id,
+        matchedAt: new Date(),
+      },
+    },
+    { new: true }
+  );
+
+  if (!reserved) {
+    return { matched: false, status: 'pending' as const, transaction: trx };
+  }
+
+  try {
+    const approved = await markDepositSuccess(String(trx._id), 'NO_PROMO');
+    const balance = await UserBalance.findOne({ userId: trx.userId }).lean();
+    return {
+      matched: true,
+      status: 'success' as const,
+      transaction: approved,
+      currentBalance: balance?.currentBalance ?? 0,
+    };
+  } catch (err) {
+    await AutoPaySms.updateOne(
+      { _id: reserved._id },
+      {
+        $set: { status: 'pending' },
+        $unset: { matchedTransactionId: 1, matchedAt: 1 },
+      }
+    );
+    throw err;
+  }
+};
+
+const failAutoPayDeposit = async (
+  userObjectId: string,
+  depositTransactionId: string
+) => {
+  if (!Types.ObjectId.isValid(depositTransactionId)) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid deposit transaction id');
+  }
+
+  const trx = await Transaction.findById(depositTransactionId);
+  if (!trx || trx.transactionType !== 'deposit') {
+    throw new AppError(httpStatus.NOT_FOUND, 'Deposit transaction not found');
+  }
+
+  if (String(trx.userId) !== String(userObjectId)) {
+    throw new AppError(httpStatus.FORBIDDEN, 'Not allowed to update this deposit');
+  }
+
+  if (trx.status === 'pending') {
+    trx.status = 'failed';
+    await trx.save();
+  }
+
+  return trx;
+};
+
 export const TransactionService = {
   createManualDeposit,
   createManualWithdraw,
@@ -882,4 +1031,6 @@ export const TransactionService = {
   getAllTransactions,
   getUserTransactions,
   rejectWithdraw,
+  verifyAutoPayDeposit,
+  failAutoPayDeposit,
 };

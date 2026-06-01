@@ -42,7 +42,14 @@ export class TransactionService {
   constructor(private repo = new TransactionRepository()) { }
 
   private pickRecords(body: IngestBody): ProviderRecord[] | null {
-    return body.records ?? body.payload?.records ?? body.data?.payload?.records ?? null;
+    if (Array.isArray(body.records)) return body.records;
+    if (Array.isArray(body.data)) return body.data;
+    if (body.data && typeof body.data === 'object' && 'payload' in body.data) {
+      const nested = body.data.payload?.records;
+      if (Array.isArray(nested)) return nested;
+    }
+    if (Array.isArray(body.payload?.records)) return body.payload.records;
+    return null;
   }
 
   async ingest(body: IngestBody) {

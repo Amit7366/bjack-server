@@ -3,12 +3,32 @@ import express from 'express';
 import auth from '../middleware/auth';
 import validateRequest from '../middleware/validateRequest';
 import { USER_ROLE } from '../User/user.constant';
-import { coinWithdrawValidation, depositValidation, withdrawValidation } from './transaction.validation';
+import {
+  coinWithdrawValidation,
+  depositValidation,
+  failAutoPayDepositSchema,
+  verifyAutoPayDepositSchema,
+  withdrawValidation,
+} from './transaction.validation';
 import { TransactionController } from './transaction.controller';
 
 const router = express.Router();
 
 router.post('/deposit/manual', auth(USER_ROLE.admin, USER_ROLE.superAdmin, USER_ROLE.user), validateRequest(depositValidation), TransactionController.createManualDeposit);
+
+router.post(
+  '/deposit/verify-autopay',
+  auth(USER_ROLE.user),
+  validateRequest(verifyAutoPayDepositSchema),
+  TransactionController.verifyAutoPayDeposit
+);
+
+router.post(
+  '/deposit/fail-autopay',
+  auth(USER_ROLE.user),
+  validateRequest(failAutoPayDepositSchema),
+  TransactionController.failAutoPayDeposit
+);
 
 router.post('/withdraw/manual', auth(USER_ROLE.admin, USER_ROLE.superAdmin, USER_ROLE.user), validateRequest(withdrawValidation), TransactionController.createManualWithdraw);
 

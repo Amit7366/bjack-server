@@ -5,9 +5,15 @@ import sendResponse from '../utilis/sendResponse';
 import { TransactionService } from './transaction.service';
 import { Request, Response } from 'express';
 import AppError from '../errors/AppError';
+import { USER_ROLE } from '../User/user.constant';
 
 const createManualDeposit = catchAsync(async (req: Request, res: Response) => {
-  const result = await TransactionService.createManualDeposit(req.body);
+  const body = { ...req.body };
+  if (req.user?.role === USER_ROLE.user) {
+    body.userId = req.user.objectId;
+    body.id = req.user.id;
+  }
+  const result = await TransactionService.createManualDeposit(body);
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
@@ -145,6 +151,31 @@ const rejectWithdraw = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const verifyAutoPayDeposit = catchAsync(async (req: Request, res: Response) => {
+  const data = await TransactionService.verifyAutoPayDeposit(req.user!.objectId, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: data.matched
+      ? 'Deposit verified and credited'
+      : 'Payment not found yet — still pending',
+    data,
+  });
+});
+
+const failAutoPayDeposit = catchAsync(async (req: Request, res: Response) => {
+  const data = await TransactionService.failAutoPayDeposit(
+    req.user!.objectId,
+    req.body.depositTransactionId
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Deposit marked as failed',
+    data,
+  });
+});
+
 export const TransactionController = {
   createManualDeposit,
   createManualWithdraw,
@@ -156,4 +187,6 @@ export const TransactionController = {
   getAllTransactions,
   getUserTransactions,
   rejectWithdraw,
+  verifyAutoPayDeposit,
+  failAutoPayDeposit,
 };

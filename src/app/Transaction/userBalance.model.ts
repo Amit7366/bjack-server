@@ -22,6 +22,9 @@ const userBalanceSchema = new Schema(
     nextSpinAt: { type: Date, default: null },
     lastSpinAmount: { type: Number, default: 0 },
     totalSpinWon: { type: Number, default: 0 },
+
+    /** Last incremental sync from game tx provider (txserver). */
+    lastGameSyncAt: { type: Date, default: null },
   },
   { timestamps: true, versionKey: false }
 );

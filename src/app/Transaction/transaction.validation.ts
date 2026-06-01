@@ -33,6 +33,21 @@ export const withdrawValidation = z.object({
     bonusAmount: z.number().default(0),
   }),
 });
+export const verifyAutoPayDepositSchema = z.object({
+  body: z.object({
+    depositTransactionId: z.string().min(1, "depositTransactionId is required"),
+    amount: z.number().min(1, "Amount must be greater than 0"),
+    transactionId: z.string().min(1, "Transaction ID is required"),
+    paymentMethod: z.enum(["bkash", "nagad", "rocket"]),
+  }),
+});
+
+export const failAutoPayDepositSchema = z.object({
+  body: z.object({
+    depositTransactionId: z.string().min(1, "depositTransactionId is required"),
+  }),
+});
+
 export const coinWithdrawValidation = z.object({
   query: z.object({
     userId: z

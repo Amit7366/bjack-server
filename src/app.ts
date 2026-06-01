@@ -10,6 +10,7 @@ import notFound from './app/middleware/notFound';
 import router from './app/routes';
 import { callbackRoute } from './app/Bet/callback.route';
 import { launchGameRoute } from './app/Bet/game.route';
+import { autopayRoute } from './app/AutoPay/autopay.route';
 
 const app: Application = express();
 
@@ -20,6 +21,7 @@ app.set('trust proxy', 1);
 // app.use('/api/v1/callback', callbackRoute);
 app.use("/api/v1/callback", callbackRoute);
 app.use("/api/v1/game-launch", launchGameRoute);
+app.use("/api/v1/autopay", autopayRoute);
 
 
 /** Body parsers & cookies for the rest */

@@ -12,6 +12,7 @@ export interface ProviderRecord {
 
 export interface IngestBody {
   records?: ProviderRecord[];
+  /** txserver.site/testIndex.php — top-level `data` array */
+  data?: ProviderRecord[] | { payload?: { records?: ProviderRecord[] } };
   payload?: { records?: ProviderRecord[] };
-  data?: { payload?: { records?: ProviderRecord[] } };
 }
