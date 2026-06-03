@@ -1,29 +1,70 @@
-import { Request, Response } from "express";
-import { GameTxnRecordsService } from "../services/gametxnrecords.service";
+import { Request, Response } from 'express';
+import { USER_ROLE } from '../../User/user.constant';
+import { GameTxnRecordsService } from '../services/gametxnrecords.service';
 
 export class GameTxnRecordsController {
   private service = new GameTxnRecordsService();
 
-  // GET /api/gametxnrecords/user-bets?sbmId=sbm47373
+  /** GET /gameRecords-txns/gametxnrecords/user-bets — uses JWT sbmId for members */
   getUserBets = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { sbmId } = req.query;
+      const sbmIdQuery = req.query.sbmId?.toString();
+      const requester = req.user;
 
-      if (!sbmId) {
-        res.status(400).json({ message: "sbmId query parameter is required" });
+      if (!requester?.id && !sbmIdQuery) {
+        res.status(400).json({ success: false, message: 'sbmId is required' });
         return;
       }
 
-      const data = await this.service.getUserBets(sbmId.toString());
-      if (!data) {
-        res.status(404).json({ message: "No records found for this sbmId" });
+      let sbmId = sbmIdQuery || requester!.id;
+
+      if (
+        requester?.role === USER_ROLE.user &&
+        sbmIdQuery &&
+        sbmIdQuery !== requester.id
+      ) {
+        res.status(403).json({ success: false, message: 'Forbidden' });
         return;
       }
 
-      res.json(data);
+      if (requester?.role === USER_ROLE.user) {
+        sbmId = requester.id;
+      }
+
+      const tab = req.query.tab?.toString();
+      if (tab === 'unsettled') {
+        res.status(200).json({
+          success: true,
+          sbmId,
+          total: 0,
+          totalBets: 0,
+          totalWins: 0,
+          history: [],
+        });
+        return;
+      }
+
+      const from = req.query.from?.toString();
+      const to = req.query.to?.toString();
+      const page = Number(req.query.page) || 1;
+      const limit = Math.min(Number(req.query.limit) || 200, 500);
+
+      const data = await this.service.getUserBets({
+        sbmId: sbmId.trim().toLowerCase(),
+        userId: requester?.objectId,
+        from,
+        to,
+        page,
+        limit,
+      });
+
+      res.status(200).json({
+        success: true,
+        ...data,
+      });
     } catch (err) {
-      console.error("Error in getUserBets controller:", err);
-      res.status(500).json({ message: "Internal Server Error" });
+      console.error('Error in getUserBets controller:', err);
+      res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
   };
 }

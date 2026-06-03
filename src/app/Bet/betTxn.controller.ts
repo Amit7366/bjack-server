@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { USER_ROLE } from '../User/user.constant';
 import { adminGetAllBetHistoryService, getUserBetHistoryService } from './betTxn.service';
 
 
@@ -6,28 +7,38 @@ export const BetTxnController = {
   getUserBetHistory: async (req: Request, res: Response) => {
     try {
       const {
-        userId, // required by validation
+        userId: userIdQuery,
         page,
         limit,
         type,
+        status,
         provider,
         game_type,
         from,
         to,
         search,
-      } = req.query as any;
+      } = req.query as Record<string, string | undefined>;
 
-      // Safety: a user may only read their own history
-      const requesterId = (req.user as any)?.objectId || (req.user as any)?._id;
-      if (!requesterId || String(requesterId) !== String(userId)) {
+      const requesterId = req.user?.objectId;
+      const userId = userIdQuery || requesterId;
+
+      if (!requesterId || !userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      if (
+        req.user?.role === USER_ROLE.user &&
+        String(requesterId) !== String(userId)
+      ) {
         return res.status(403).json({ message: 'Forbidden: cannot read other user history' });
       }
 
       const result = await getUserBetHistoryService({
-        userId,
+        userId: String(userId),
         page: Number(page) || 1,
         limit: Number(limit) || 20,
-        type,
+        type: type as 'win' | 'lose' | 'refund' | undefined,
+        status: status as 'pending' | 'completed' | 'failed' | undefined,
         provider,
         game_type,
         from,
@@ -35,7 +46,7 @@ export const BetTxnController = {
         search,
       });
 
-      res.status(200).json(result);
+      res.status(200).json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ message: 'Failed to fetch user bet history', error: error.message });
     }

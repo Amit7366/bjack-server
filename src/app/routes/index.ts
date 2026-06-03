@@ -20,6 +20,7 @@ import { RecycleRoutes } from '../Recycle/recycle.route';
 import { RecycleAssignRoutes } from '../Recycle/recycle.assign.route';
 import { NoDepositBalanceRoutes } from '../NoDepositBalance/noDepositBalance.route';
 import { MyFavouriteCustomerRoutes } from '../MyFavouriteCustomers/myFavouriteCustomer.routes';
+import { PromotionRoutes } from '../Promotion/promotion.route';
 
 const router = Router();
 
@@ -45,8 +46,7 @@ const moduleRoutes = [
   { path: '/RecycleAssign', route: RecycleAssignRoutes },
   { path: '/no-deposit-balance', route: NoDepositBalanceRoutes },
   { path: '/my-favourite-customers', route: MyFavouriteCustomerRoutes },
-
-
+  { path: '/promotions', route: PromotionRoutes },
 ];
 
 moduleRoutes.forEach((r) => router.use(r.path, r.route));

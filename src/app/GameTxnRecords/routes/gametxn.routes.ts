@@ -16,6 +16,16 @@ router.post(
   tx.syncUser
 );
 
-router.get("/gametxnrecords/user-bets", auth(USER_ROLE.superAdmin, USER_ROLE.admin, USER_ROLE.user), gameTxnController.getUserBets);
+router.get(
+  '/gametxnrecords/user-bets',
+  auth(USER_ROLE.superAdmin, USER_ROLE.admin, USER_ROLE.user),
+  gameTxnController.getUserBets
+);
+
+router.get(
+  '/gametxnrecords/user-bets/me',
+  auth(USER_ROLE.user),
+  gameTxnController.getUserBets
+);
 
 export const gametxnrecordsRoute = router;

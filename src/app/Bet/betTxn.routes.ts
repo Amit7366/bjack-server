@@ -20,6 +20,13 @@ router.get(
   BetTxnController.getUserBetHistory
 );
 
+router.get(
+  '/history/me',
+  auth(USER_ROLE.user),
+  validateRequest(userBetHistorySchema),
+  BetTxnController.getUserBetHistory
+);
+
 /**
  * ADMIN: All users bet history with totals, latest-first.
  */

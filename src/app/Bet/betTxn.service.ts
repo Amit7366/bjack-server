@@ -7,6 +7,7 @@ type CommonQuery = {
   page?: number;
   limit?: number;
   type?: 'win' | 'lose' | 'refund';
+  status?: 'pending' | 'completed' | 'failed';
   provider?: string;
   game_type?: string;
   from?: string;
@@ -24,6 +25,7 @@ const buildFilter = (q: CommonQuery & { userId?: string }) => {
     filter.userId = new mongoose.Types.ObjectId(String(q['userId']));
   }
   if (q.type) filter.type = q.type;
+  if (q.status) filter.status = q.status;
   if (q.provider) filter['metadata.provider'] = q.provider;
   if (q.game_type) filter['metadata.game_type'] = q.game_type;
 

@@ -8,15 +8,16 @@ const commonQuery = z.object({
   type: z.enum(['win', 'lose', 'refund']).optional(),
   provider: z.string().min(1).optional(),
   game_type: z.string().min(1).optional(),
-  from: z.string().datetime().optional(),
-  to: z.string().datetime().optional(),
+  from: z.string().min(1).optional(),
+  to: z.string().min(1).optional(),
+  status: z.enum(['pending', 'completed', 'failed']).optional(),
   search: z.string().min(1).optional(),
 });
 
 // USER: requires userId in query
 export const userBetHistorySchema = z.object({
   query: commonQuery.extend({
-    userId: z.string().regex(objectIdRegex, 'Invalid userId'),
+    userId: z.string().regex(objectIdRegex, 'Invalid userId').optional(),
   }),
 });
 

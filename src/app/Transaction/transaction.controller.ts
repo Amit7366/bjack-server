@@ -23,7 +23,18 @@ const createManualDeposit = catchAsync(async (req: Request, res: Response) => {
 });
 
 const createManualWithdraw = catchAsync(async (req: Request, res: Response) => {
-  const result = await TransactionService.createManualWithdraw(req.body);
+  const body = { ...req.body };
+  if (req.user?.role === USER_ROLE.user) {
+    body.userId = req.user.objectId;
+    body.id = req.user.id;
+    if (!body.accountHolderName?.trim()) {
+      body.accountHolderName = req.user.userName || 'Member';
+    }
+    if (!body.transactionId?.trim()) {
+      body.transactionId = 'sbm';
+    }
+  }
+  const result = await TransactionService.createManualWithdraw(body);
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
@@ -110,23 +121,43 @@ const getAllTransactions = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getUserTransactions = catchAsync(async (req: Request, res: Response) => {
-  const { userId, status, type } = req.query;
+  const { userId, status, type, transactionType, from, to } = req.query;
 
-  if (!userId || typeof userId !== 'string') {
-    return res.status(httpStatus.BAD_REQUEST).json({
-      success: false,
-      message: 'Missing or invalid userId in query params',
-    });
+  let resolvedUserId: string | undefined;
+
+  if (req.user?.role === USER_ROLE.user) {
+    resolvedUserId = req.user.objectId;
+  } else if (userId && typeof userId === 'string') {
+    resolvedUserId = userId;
   }
 
-  const filters: any = { userId };
-
-  if (status && typeof status === 'string') {
-    filters.status = status;
+  if (!resolvedUserId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Missing or invalid userId');
   }
 
-  if (type && typeof type === 'string') {
-    filters.transactionType = type;
+  const filters: Record<string, unknown> = { userId: resolvedUserId };
+
+  const statusParam =
+    (typeof status === 'string' && status) ||
+    (typeof req.query.statuses === 'string' && req.query.statuses) ||
+    undefined;
+  if (statusParam) {
+    filters.status = statusParam;
+  }
+
+  const typeParam =
+    (typeof transactionType === 'string' && transactionType) ||
+    (typeof type === 'string' && type) ||
+    undefined;
+  if (typeParam) {
+    filters.transactionType = typeParam;
+  }
+
+  if (typeof from === 'string' && from) {
+    filters.from = from;
+  }
+  if (typeof to === 'string' && to) {
+    filters.to = to;
   }
 
   const result = await TransactionService.getUserTransactions(filters);

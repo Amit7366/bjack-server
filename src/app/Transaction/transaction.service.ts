@@ -24,6 +24,7 @@ import { Types } from 'mongoose';
 import { GameTxnRecord } from '../GameTxnRecords/models/GameTxnRecord';
 import { GameTxnRecordBackup } from '../GameTxnRecords/models/gameTxnRecordBackup.model';
 import { AutoPaySms } from '../AutoPay/autopaySms.model';
+import { findPromotionByCode } from '../Promotion/promotion.constant';
 import {
   smsMatchesPaymentMethod,
   type AutoPayPaymentMethod,
@@ -235,6 +236,22 @@ export const createManualDeposit = async (data: Partial<ITransaction>) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'Missing required fields');
   }
 
+  const resolvedPromoCode = promoCode?.trim() || 'NO_PROMO';
+  const promoConfig = findPromotionByCode(resolvedPromoCode);
+  if (!promoConfig) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid promotion code');
+  }
+
+  if (
+    resolvedPromoCode !== 'NO_PROMO' &&
+    Number(amount) < Number(promoConfig.minDeposit || 0)
+  ) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Deposit amount must be at least ${promoConfig.minDeposit} for this promotion`
+    );
+  }
+
   let finalAmount = amount;
   let totalBonusAmount = 0;
 
@@ -302,7 +319,7 @@ export const createManualDeposit = async (data: Partial<ITransaction>) => {
     transactionId,
     status: 'pending',
     invoiceId: uuidv4(),
-    promoCode,           
+    promoCode: resolvedPromoCode,
     bonusAmount: totalBonusAmount, // will remain 0
     agentNumber,         
     walletNumber,        
@@ -839,7 +856,38 @@ const getAllTransactions = async (filter: any) => {
 };
 
 const getUserTransactions = async (filters: Record<string, any>) => {
-  return await Transaction.find(filters).sort({ createdAt: -1 });
+  const query = { ...filters };
+
+  if (query.userId && typeof query.userId === 'string') {
+    query.userId = new Types.ObjectId(query.userId);
+  }
+
+  if (query.from || query.to) {
+    query.createdAt = {};
+    if (query.from) {
+      query.createdAt.$gte = new Date(query.from);
+      delete query.from;
+    }
+    if (query.to) {
+      query.createdAt.$lte = new Date(query.to);
+      delete query.to;
+    }
+  }
+
+  if (typeof query.status === 'string' && query.status.includes(',')) {
+    query.status = { $in: query.status.split(',').map((s: string) => s.trim()) };
+  }
+
+  if (
+    typeof query.transactionType === 'string' &&
+    query.transactionType.includes(',')
+  ) {
+    query.transactionType = {
+      $in: query.transactionType.split(',').map((s: string) => s.trim()),
+    };
+  }
+
+  return await Transaction.find(query).sort({ createdAt: -1 }).lean();
 };
 
 const rejectWithdraw = async (trxId: string) => {
@@ -995,7 +1043,10 @@ const verifyAutoPayDeposit = async (
   }
 
   try {
-    const approved = await markDepositSuccess(String(trx._id), 'NO_PROMO');
+    const approved = await markDepositSuccess(
+      String(trx._id),
+      trx.promoCode || 'NO_PROMO'
+    );
     const balance = await UserBalance.findOne({ userId: trx.userId }).lean();
     return {
       matched: true,

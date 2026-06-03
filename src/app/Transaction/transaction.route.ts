@@ -49,9 +49,11 @@ router.get('/all', auth(USER_ROLE.admin, USER_ROLE.superAdmin), TransactionContr
 // 🔽 New route for user-based transaction list (by query param)
 router.get(
   '/all/user',
-  auth(USER_ROLE.user),
+  auth(USER_ROLE.user, USER_ROLE.admin, USER_ROLE.superAdmin),
   TransactionController.getUserTransactions
 );
+
+router.get('/me', auth(USER_ROLE.user), TransactionController.getUserTransactions);
 
 
 router.get('/balance/:userId', auth(USER_ROLE.admin, USER_ROLE.superAdmin, USER_ROLE.user), TransactionController.getBalance);

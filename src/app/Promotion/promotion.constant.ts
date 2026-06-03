@@ -1,79 +1,118 @@
-export const PROMOTION_LIST = [
+import type { PromotionConfig } from "./promotion.types";
+
+export const PROMOTION_LIST: PromotionConfig[] = [
   {
-    code: 'NO_PROMO',
-    title: 'No Promotion Selected',
+    code: "NO_PROMO",
+    title: "Normal",
+    titleBn: "নরমাল",
+    description: "Normal deposit",
+    descriptionBn: "নরমাল ডিপোজিট",
     minDeposit: 0,
     bonusRate: 0,
     turnoverX: 0,
     eligibleGames: [],
     maxWithdrawLimit: null,
-    usageType: 'none', // or 'optional'
+    usageType: "none",
+    validFrom: "2026-01-04 22:00:00",
+    validTo: "2099-12-31 21:59:59",
   },
   {
-    code: 'PROMO_150_SLOT',
-    title: '150% bonus (Slot + Fishing)',
+    code: "PROMO_150_SLOT",
+    title: "150% bonus (Slot + Fishing)",
+    titleBn: "১৫০% বোনাস (স্লট + ফিশিং)",
+    description: "Slot & fishing games",
+    descriptionBn: "স্লট ও ফিশিং গেম",
     minDeposit: 500,
     bonusRate: 1.5,
     turnoverX: 22,
-    eligibleGames: ['slot', 'fishing'],
+    eligibleGames: ["slot", "fishing"],
     maxWithdrawLimit: null,
-    usageType: 'once', // changed from 'always'
+    usageType: "once",
+    validFrom: "2026-01-01 00:00:00",
+    validTo: "2099-12-31 23:59:59",
   },
-
   {
-    code: 'PROMO_100_ALL',
-    title: '100% bonus (All games)',
+    code: "PROMO_100_ALL",
+    title: "100% bonus (All games)",
+    titleBn: "১০০% বোনাস (সকল গেম)",
+    description: "All games welcome offer",
+    descriptionBn: "সকল গেমে ওয়েলকাম অফার",
     minDeposit: 0,
     bonusRate: 1,
     turnoverX: 20,
-    eligibleGames: ['all'],
+    eligibleGames: ["all"],
     maxWithdrawLimit: null,
-    usageType: 'once', // changed from 'always'
+    usageType: "once",
+    validFrom: "2026-01-01 00:00:00",
+    validTo: "2099-12-31 23:59:59",
   },
-
   {
-    code: 'PROMO_150_LIVE',
-    title: '150% bonus (Live games)',
+    code: "PROMO_150_LIVE",
+    title: "150% bonus (Live games)",
+    titleBn: "১৫০% বোনাস (লাইভ গেম)",
+    description: "Live casino games",
+    descriptionBn: "লাইভ ক্যাসিনো গেম",
     minDeposit: 0,
     bonusRate: 1.5,
     turnoverX: 25,
-    eligibleGames: ['live'],
+    eligibleGames: ["live"],
     maxWithdrawLimit: null,
-    usageType: 'once', // changed from 'always'
+    usageType: "once",
+    validFrom: "2026-01-01 00:00:00",
+    validTo: "2099-12-31 23:59:59",
   },
   {
-    code: 'PROMO_300_FIXED',
-    title: 'Fixed 300TK bonus on 500TK deposit',
+    code: "PROMO_300_FIXED",
+    title: "Fixed 300TK bonus on 500TK deposit",
+    titleBn: "৫০০ টাকা ডিপোজিটে ৩০০ টাকা বোনাস",
+    description: "Fixed bonus on 500 TK deposit",
+    descriptionBn: "৫০০ টাকা ডিপোজিটে ফিক্সড বোনাস",
     minDeposit: 500,
-    bonusRate: 0, // special case: fixed bonus
+    bonusRate: 0,
     fixedBonus: 300,
     turnoverX: 8,
-    eligibleGames: ['all'],
+    eligibleGames: ["all"],
     maxWithdrawLimit: 5000,
-    usageType: 'once', // changed from 'always'
+    usageType: "once",
+    validFrom: "2026-01-01 00:00:00",
+    validTo: "2099-12-31 23:59:59",
   },
-
   {
-    code: 'PROMO_25_DAILY',
-    title: '25% reload bonus (daily)',
+    code: "PROMO_25_DAILY",
+    title: "25% reload bonus (daily)",
+    titleBn: "২৫% রিলোড বোনাস (দৈনিক)",
+    description: "Daily reload — slot & fishing",
+    descriptionBn: "দৈনিক রিলোড — স্লট ও ফিশিং",
     minDeposit: 1000,
     bonusRate: 0.25,
     turnoverX: 18,
-    eligibleGames: ['slot', 'fishing'],
+    eligibleGames: ["slot", "fishing"],
     maxWithdrawLimit: null,
-    usageType: 'daily', // ✅ once per calendar day
-    maxBonusCap: 5000, // ✅ max cumulative bonus allowed for this promo
+    usageType: "daily",
+    maxBonusCap: 5000,
+    validFrom: "2026-01-01 00:00:00",
+    validTo: "2099-12-31 23:59:59",
   },
-
   {
-    code: 'PROMO_30_LIVE_ONCE',
-    title: '30% reload bonus (Live games)',
+    code: "PROMO_30_LIVE_ONCE",
+    title: "30% reload bonus (Live games)",
+    titleBn: "৩০% রিলোড বোনাস (লাইভ গেম)",
+    description: "Live games reload bonus",
+    descriptionBn: "লাইভ গেম রিলোড বোনাস",
     minDeposit: 1000,
     bonusRate: 0.3,
     turnoverX: 18,
-    eligibleGames: ['live'],
+    eligibleGames: ["live"],
     maxWithdrawLimit: null,
-    usageType: 'always',
-    maxBonusCap: 5000, // ✅ max cumulative bonus allowed for this promo
+    usageType: "always",
+    maxBonusCap: 5000,
+    validFrom: "2026-01-01 00:00:00",
+    validTo: "2099-12-31 23:59:59",
   },
 ];
+
+export const PROMOTION_CODES = PROMOTION_LIST.map((p) => p.code);
+
+export function findPromotionByCode(code: string) {
+  return PROMOTION_LIST.find((p) => p.code === code);
+}
