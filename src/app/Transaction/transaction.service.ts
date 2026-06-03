@@ -796,17 +796,37 @@ export const markDepositSuccess = async (
   };
 };
 
-const getUserBalance = async (userId: string) => {
-  // ✅ Ensure the query uses the ObjectId index (critical for speed)
-  const queryUserId = Types.ObjectId.isValid(userId)
-    ? new Types.ObjectId(userId)
-    : userId;
+const getUserBalance = async (memberOrUserId: string) => {
+  const raw = String(memberOrUserId ?? '').trim();
+  if (!raw) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'User id is required');
+  }
 
-  // ✅ Use .lean() to return plain JS object (much faster than full mongoose doc)
-  const balance = await UserBalance.findOne({ userId: queryUserId })
-    .lean()
-    .maxTimeMS(2000) // optional: prevents long-running queries
-    .exec();
+  let balance = null;
+
+  // Member id on UserBalance.id (e.g. sbm47374) — same as login lookup
+  if (/^sbm/i.test(raw)) {
+    balance = await UserBalance.findOne({ id: raw.toLowerCase() })
+      .lean()
+      .maxTimeMS(2000)
+      .exec();
+  }
+
+  // MongoDB ObjectId → UserBalance.userId
+  if (!balance && Types.ObjectId.isValid(raw)) {
+    balance = await UserBalance.findOne({ userId: new Types.ObjectId(raw) })
+      .lean()
+      .maxTimeMS(2000)
+      .exec();
+  }
+
+  // Fallback: exact id string
+  if (!balance) {
+    balance = await UserBalance.findOne({ id: raw })
+      .lean()
+      .maxTimeMS(2000)
+      .exec();
+  }
 
   if (!balance) throw new AppError(httpStatus.NOT_FOUND, 'Balance not found');
 
