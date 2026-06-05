@@ -181,7 +181,7 @@ const getUserPromotionSummary = async (userId: string) => {
       turnoverRequired: required,
       turnoverCompleted: completed,
       isCompleted: Boolean(bonus.isCompleted),
-      promoCode: bonus.promoCode,
+      promoCode: bonus.promoCode ?? undefined,
       eligibleGameTypes: bonus.eligibleGameTypes,
       isActive: Boolean(bonus.isActive),
     });
@@ -285,7 +285,7 @@ const getUserPromotionSummary = async (userId: string) => {
       completionPercentage,
       activeDeposit: activeDeposit
         ? {
-            promoCode: activeDeposit.promoCode,
+            promoCode: activeDeposit.promoCode ?? undefined,
             turnoverRequired: Number(activeDeposit.turnoverRequired || 0),
             turnoverCompleted: Number(activeDeposit.turnoverCompleted || 0),
             remaining: Math.max(
