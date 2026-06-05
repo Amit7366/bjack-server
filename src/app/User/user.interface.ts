@@ -43,9 +43,16 @@ export type TUser = {
   signupBonusGiven?: boolean;
   // ✅ KYC
   kycVerified?: boolean;
+  kycStatus?: 'pending' | 'approved' | 'rejected' | null;
+  kycDocumentType?: string;
+  kycDocumentNo?: string;
+  kycDocumentExpiry?: Date;
   kycDocumentFrontUrl?: string;
   kycDocumentBackUrl?: string;
   kycSelfieUrl?: string;
+  kycSubmittedAt?: Date;
+  kycReviewedAt?: Date;
+  kycReviewNote?: string;
 
   isVerified: boolean;
   isDeleted: boolean;

@@ -22,6 +22,7 @@ import { NoDepositBalanceRoutes } from '../NoDepositBalance/noDepositBalance.rou
 import { MyFavouriteCustomerRoutes } from '../MyFavouriteCustomers/myFavouriteCustomer.routes';
 import { PromotionRoutes } from '../Promotion/promotion.route';
 import ReferralRoutes from '../Referral/referral.routes';
+import { KycRoutes } from '../Kyc/kyc.route';
 
 const router = Router();
 
@@ -49,6 +50,7 @@ const moduleRoutes = [
   { path: '/my-favourite-customers', route: MyFavouriteCustomerRoutes },
   { path: '/promotions', route: PromotionRoutes },
   { path: '/referral', route: ReferralRoutes },
+  { path: '/kyc', route: KycRoutes },
 ];
 
 moduleRoutes.forEach((r) => router.use(r.path, r.route));

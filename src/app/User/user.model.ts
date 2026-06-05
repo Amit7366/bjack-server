@@ -77,9 +77,20 @@ const userSchema = new Schema<TUser, UserModel>(
     },
 
     kycVerified: { type: Boolean, default: false },
+    kycStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: null,
+    },
+    kycDocumentType: { type: String, required: false },
+    kycDocumentNo: { type: String, required: false },
+    kycDocumentExpiry: { type: Date, required: false },
     kycDocumentFrontUrl: { type: String, required: false },
-    kycDocumentBackUrl: { type: String }, // optional
+    kycDocumentBackUrl: { type: String },
     kycSelfieUrl: { type: String, required: false },
+    kycSubmittedAt: { type: Date, required: false },
+    kycReviewedAt: { type: Date, required: false },
+    kycReviewNote: { type: String, required: false },
 
     dateOfBirth: { type: Date },
     lastActiveAt: { type: Date, default: Date.now },
