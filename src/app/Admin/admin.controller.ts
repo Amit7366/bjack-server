@@ -3,6 +3,8 @@ import httpStatus from 'http-status';
 import { AdminServices } from './admin.service';
 import catchAsync from '../utilis/catchAsync';
 import sendResponse from '../utilis/sendResponse';
+import AppError from '../errors/AppError';
+import { USER_ROLE } from '../User/user.constant';
 
 const getSingleAdmin = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -55,7 +57,19 @@ const deleteAdmin = catchAsync(async (req, res) => {
   });
 });
 const getUserPromotionSummary = catchAsync(async (req, res) => {
-  const userId = req.params.userId;
+  let userId = String(req.params.userId ?? '').trim();
+  if (userId === 'me') {
+    userId = String(req.user?.objectId ?? '').trim();
+  }
+  if (!userId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'User id is required');
+  }
+  if (
+    req.user?.role === USER_ROLE.user &&
+    userId !== String(req.user.objectId)
+  ) {
+    throw new AppError(httpStatus.FORBIDDEN, 'You can only view your own turnover');
+  }
 
   const summary = await AdminServices.getUserPromotionSummary(userId);
 

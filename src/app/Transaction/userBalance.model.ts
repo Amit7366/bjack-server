@@ -25,6 +25,12 @@ const userBalanceSchema = new Schema(
 
     /** Last incremental sync from game tx provider (txserver). */
     lastGameSyncAt: { type: Date, default: null },
+    /** UTC-day marker — only ingest vendor rows newer than lastTimestamp/lastSerial. */
+    gameIngestMarker: {
+      date: { type: String, default: '' },
+      lastTimestamp: { type: String, default: '' },
+      lastSerial: { type: String, default: '' },
+    },
   },
   { timestamps: true, versionKey: false }
 );

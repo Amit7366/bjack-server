@@ -5,6 +5,7 @@ import { TransactionRepository } from '../repositories/transaction.repository';
 import { GameTxnRecord } from '../models/GameTxnRecord';
 import { UserBalance } from '../../Transaction/userBalance.model';
 import os from 'os';
+import { applyTurnoverForInsertedBets } from '../utils/turnoverProgress.util';
 
 type Normalized = {
   txnId: string;
@@ -227,7 +228,10 @@ export class TransactionService {
         const existingMap = new Map<string, any>();
         for (const r of rows) existingMap.set(r.txnId, r);
         for (let idx = 0; idx < docsToInsert.length; idx++) {
-          if (existingMap.has(docsToInsert[idx].txnId)) insertedIndices.push(idx);
+          const txnId = docsToInsert[idx].txnId;
+          // Only count as "inserted" if it was not already present
+          // before this batch (prevents concurrent double-counting).
+          if (existingMap.has(txnId) && !existingSet.has(txnId)) insertedIndices.push(idx);
         }
       }
 
@@ -263,6 +267,13 @@ export class TransactionService {
         } catch {
           // ignore errors in balance updates (best-effort)
         }
+      }
+
+      if (insertedIndices.length > 0) {
+        const insertedDocs = insertedIndices
+          .map((idx) => docsToInsert[idx])
+          .filter(Boolean);
+        await applyTurnoverForInsertedBets(insertedDocs);
       }
 
       return { accepted: localAccepted, duplicates: duplicatesLocal, balancesUpdated };

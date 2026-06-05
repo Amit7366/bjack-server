@@ -100,9 +100,8 @@ const deleteAdminFromDB = async (id: string) => {
 const getUserPromotionSummary = async (userId: string) => {
   const objectUserId = new Types.ObjectId(userId);
 
-  // --- 1️⃣ Direct, fast aggregation ---
   const txnAgg = await GameTxnRecord.aggregate([
-    { $match: { userId: objectUserId } }, // ✅ no lookup needed
+    { $match: { userId: objectUserId } },
     {
       $group: {
         _id: null,
@@ -111,106 +110,194 @@ const getUserPromotionSummary = async (userId: string) => {
     },
   ]);
 
-  const actualTurnover = txnAgg[0]?.totalTurnover || 0;
+  const actualBetTurnover = Number(txnAgg[0]?.totalTurnover || 0);
 
-  // --- 2️⃣ Fetch all bonuses in parallel ---
   const [depositBonuses, signupBonus, referralBonuses, loginBonuses] =
     await Promise.all([
-      TurnoverTracking.find({ userId }),
+      TurnoverTracking.find({ userId }).sort({ createdAt: -1 }),
       SignupBonusTracking.findOne({ userId }),
       ReferralBonusTracking.find({ userId }),
       LoginBonusTracking.find({ userId }),
     ]);
 
-  // --- 3️⃣ Process all bonuses ---
-  let totalTurnoverRequired = 0;
+  type ProgressItem = {
+    id: string;
+    kind: 'deposit' | 'signup' | 'referral' | 'login';
+    label: string;
+    turnoverRequired: number;
+    turnoverCompleted: number;
+    remaining: number;
+    isCompleted: boolean;
+    promoCode?: string;
+    eligibleGameTypes?: string[];
+    isActive?: boolean;
+  };
+
+  const progressItems: ProgressItem[] = [];
+  let totalRequired = 0;
+  let totalCompleted = 0;
+  let totalRemaining = 0;
+
+  const addPendingProgress = (
+    item: Omit<ProgressItem, 'remaining'> & { remaining?: number }
+  ) => {
+    const required = Number(item.turnoverRequired || 0);
+    const completed = Number(item.turnoverCompleted || 0);
+    const remaining = Math.max(0, required - completed);
+    if (item.isCompleted || required <= 0) return;
+
+    progressItems.push({ ...item, turnoverRequired: required, turnoverCompleted: completed, remaining });
+    totalRequired += required;
+    totalCompleted += completed;
+    totalRemaining += remaining;
+  };
 
   for (const bonus of depositBonuses) {
-    if (!bonus.isCompleted) {
-      if (actualTurnover >= bonus.turnoverRequired) {
-        await TurnoverTracking.updateOne(
-          { _id: bonus._id },
-          { $set: { isCompleted: true, turnoverCompleted: actualTurnover } }
-        );
-        bonus.isCompleted = true;
-        bonus.turnoverCompleted = actualTurnover;
-      } else {
-        totalTurnoverRequired +=
-          bonus.turnoverRequired - (bonus.turnoverCompleted || 0);
-      }
+    const required = Number(bonus.turnoverRequired || 0);
+    let completed = Number(bonus.turnoverCompleted || 0);
+
+    if (!bonus.isCompleted && required > 0 && completed >= required) {
+      await TurnoverTracking.updateOne(
+        { _id: bonus._id },
+        {
+          $set: {
+            isCompleted: true,
+            isActive: false,
+            turnoverCompleted: required,
+            eligibleGameTypes: ['none'],
+            maxWithdraw: null,
+          },
+        }
+      );
+      bonus.isCompleted = true;
+      bonus.isActive = false;
+      completed = required;
     }
+
+    addPendingProgress({
+      id: String(bonus._id),
+      kind: 'deposit',
+      label: bonus.promoCode ? `Deposit (${bonus.promoCode})` : 'Deposit turnover',
+      turnoverRequired: required,
+      turnoverCompleted: completed,
+      isCompleted: Boolean(bonus.isCompleted),
+      promoCode: bonus.promoCode,
+      eligibleGameTypes: bonus.eligibleGameTypes,
+      isActive: Boolean(bonus.isActive),
+    });
   }
 
-  if (signupBonus && !signupBonus.isCompleted) {
-    if (actualTurnover >= signupBonus.turnoverRequired) {
+  if (signupBonus) {
+    const required = Number(signupBonus.turnoverRequired || 0);
+    let completed = Number(signupBonus.turnoverCompleted || 0);
+
+    if (!signupBonus.isCompleted && required > 0 && completed >= required) {
       await SignupBonusTracking.updateOne(
         { _id: signupBonus._id },
-        { $set: { isCompleted: true } }
+        { $set: { isCompleted: true, turnoverCompleted: required } }
       );
       signupBonus.isCompleted = true;
-    } else {
-      totalTurnoverRequired +=
-        signupBonus.turnoverRequired - (signupBonus.turnoverCompleted || 0);
+      completed = required;
     }
+
+    addPendingProgress({
+      id: String(signupBonus._id),
+      kind: 'signup',
+      label: 'Signup bonus',
+      turnoverRequired: required,
+      turnoverCompleted: completed,
+      isCompleted: Boolean(signupBonus.isCompleted),
+    });
   }
 
   for (const bonus of referralBonuses) {
-    if (!bonus.isCompleted) {
-      if (actualTurnover >= bonus.turnoverRequired) {
-        await ReferralBonusTracking.updateOne(
-          { _id: bonus._id },
-          {
-            $set: {
-              isCompleted: true,
-              turnoverCompleted: bonus.turnoverRequired,
-            },
-          }
-        );
-        bonus.isCompleted = true;
-        bonus.turnoverCompleted = bonus.turnoverRequired;
-      } else {
-        totalTurnoverRequired +=
-          bonus.turnoverRequired - (bonus.turnoverCompleted || 0);
-      }
+    const required = Number(bonus.turnoverRequired || 0);
+    let completed = Number(bonus.turnoverCompleted || 0);
+
+    if (!bonus.isCompleted && required > 0 && completed >= required) {
+      await ReferralBonusTracking.updateOne(
+        { _id: bonus._id },
+        { $set: { isCompleted: true, turnoverCompleted: required } }
+      );
+      bonus.isCompleted = true;
+      completed = required;
     }
+
+    addPendingProgress({
+      id: String(bonus._id),
+      kind: 'referral',
+      label: 'Referral bonus',
+      turnoverRequired: required,
+      turnoverCompleted: completed,
+      isCompleted: Boolean(bonus.isCompleted),
+    });
   }
 
   for (const bonus of loginBonuses) {
-    if (!bonus.isCompleted) {
-      if (actualTurnover >= bonus.turnoverRequired) {
-        await LoginBonusTracking.updateOne(
-          { _id: bonus._id },
-          {
-            $set: {
-              isCompleted: true,
-              turnoverCompleted: bonus.turnoverRequired,
-            },
-          }
-        );
-        bonus.isCompleted = true;
-        bonus.turnoverCompleted = bonus.turnoverRequired;
-      } else {
-        totalTurnoverRequired +=
-          bonus.turnoverRequired - (bonus.turnoverCompleted || 0);
-      }
+    const required = Number(bonus.turnoverRequired || 0);
+    let completed = Number(bonus.turnoverCompleted || 0);
+
+    if (!bonus.isCompleted && required > 0 && completed >= required) {
+      await LoginBonusTracking.updateOne(
+        { _id: bonus._id },
+        { $set: { isCompleted: true, turnoverCompleted: required } }
+      );
+      bonus.isCompleted = true;
+      completed = required;
     }
+
+    addPendingProgress({
+      id: String(bonus._id),
+      kind: 'login',
+      label: 'Login bonus',
+      turnoverRequired: required,
+      turnoverCompleted: completed,
+      isCompleted: Boolean(bonus.isCompleted),
+    });
   }
 
-  // --- 4️⃣ Completion percentage ---
   const completionPercentage =
-    totalTurnoverRequired > 0
-      ? parseFloat(((actualTurnover / totalTurnoverRequired) * 100).toFixed(2))
-      : 0;
+    totalRequired > 0
+      ? parseFloat(((totalCompleted / totalRequired) * 100).toFixed(2))
+      : totalRemaining === 0
+        ? 100
+        : 0;
 
-  // --- 5️⃣ Final result ---
+  const activeDeposit =
+    depositBonuses.find((b) => b.isActive && !b.isCompleted) ??
+    depositBonuses.find((b) => !b.isCompleted) ??
+    null;
+
   return {
     depositBonuses,
     signupBonus,
     referralBonuses,
     loginBonuses,
-    totalTurnoverRequired,
-    totalTurnoverCompleted: actualTurnover,
+    totalTurnoverRequired: totalRemaining,
+    totalTurnoverCompleted: totalCompleted,
     completionPercentage,
+    actualBetTurnover,
+    progress: {
+      items: progressItems,
+      totalRequired,
+      totalCompleted,
+      totalRemaining,
+      completionPercentage,
+      activeDeposit: activeDeposit
+        ? {
+            promoCode: activeDeposit.promoCode,
+            turnoverRequired: Number(activeDeposit.turnoverRequired || 0),
+            turnoverCompleted: Number(activeDeposit.turnoverCompleted || 0),
+            remaining: Math.max(
+              0,
+              Number(activeDeposit.turnoverRequired || 0) -
+                Number(activeDeposit.turnoverCompleted || 0)
+            ),
+            isCompleted: Boolean(activeDeposit.isCompleted),
+            eligibleGameTypes: activeDeposit.eligibleGameTypes,
+          }
+        : null,
+    },
   };
 };
 

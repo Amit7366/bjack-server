@@ -55,6 +55,7 @@ router.get(
 
 router.get('/me', auth(USER_ROLE.user), TransactionController.getUserTransactions);
 
+router.get('/turnover/me', auth(USER_ROLE.user), TransactionController.getMyTurnover);
 
 router.get('/balance/:userId', auth(USER_ROLE.admin, USER_ROLE.superAdmin, USER_ROLE.user), TransactionController.getBalance);
 router.patch(

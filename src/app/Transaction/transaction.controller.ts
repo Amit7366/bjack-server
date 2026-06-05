@@ -6,6 +6,7 @@ import { TransactionService } from './transaction.service';
 import { Request, Response } from 'express';
 import AppError from '../errors/AppError';
 import { USER_ROLE } from '../User/user.constant';
+import { AdminServices } from '../Admin/admin.service';
 
 const createManualDeposit = catchAsync(async (req: Request, res: Response) => {
   const body = { ...req.body };
@@ -207,6 +208,23 @@ const failAutoPayDeposit = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/** Logged-in member turnover only — uses JWT objectId, never a URL param. */
+const getMyTurnover = catchAsync(async (req: Request, res: Response) => {
+  const userId = String(req.user?.objectId ?? '').trim();
+  if (!userId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'Login required');
+  }
+
+  const summary = await AdminServices.getUserPromotionSummary(userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Turnover summary fetched successfully',
+    data: summary,
+  });
+});
+
 export const TransactionController = {
   createManualDeposit,
   createManualWithdraw,
@@ -220,4 +238,5 @@ export const TransactionController = {
   rejectWithdraw,
   verifyAutoPayDeposit,
   failAutoPayDeposit,
+  getMyTurnover,
 };

@@ -16,6 +16,12 @@ router.get(
 );
 
 router.get(
+  '/promotion-summary/:userId',
+  auth(USER_ROLE.superAdmin, USER_ROLE.admin, USER_ROLE.user),
+  AdminControllers.getUserPromotionSummary
+);
+
+router.get(
   '/:id',
   auth(USER_ROLE.superAdmin, USER_ROLE.admin),
   AdminControllers.getSingleAdmin,
@@ -32,11 +38,6 @@ router.delete(
   '/:id',
   auth(USER_ROLE.superAdmin),
   AdminControllers.deleteAdmin,
-);
-router.get(
-  '/promotion-summary/:userId',
-  auth(USER_ROLE.superAdmin, USER_ROLE.admin, USER_ROLE.user),
-  AdminControllers.getUserPromotionSummary
 );
 router.post(
   '/users/:userId/give-signup-bonus',
