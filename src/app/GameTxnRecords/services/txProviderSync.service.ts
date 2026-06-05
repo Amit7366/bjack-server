@@ -262,7 +262,9 @@ export class TxProviderSyncService {
         return best;
       }, null as { ts: string; serial: string } | null);
 
-      if (batchNewest) {
+      const batchProcessed =
+        (batchStats.accepted ?? 0) > 0 || (batchStats.duplicates ?? 0) > 0;
+      if (batchNewest && batchProcessed) {
         const batchMarker: IngestMarker = {
           date: todayUTC,
           lastTimestamp: batchNewest.ts,
@@ -279,26 +281,27 @@ export class TxProviderSyncService {
       }
     }
 
-    const newest = sortedNew[0];
-    const nextMarker: IngestMarker = {
-      date: todayUTC,
-      lastTimestamp: String(newest.timestamp ?? ''),
-      lastSerial: String(newest.serial_number ?? ''),
-    };
-
     const refreshed = await UserBalance.findOne({ id: normalizedId })
       .select('currentBalance')
       .lean();
 
-    await UserBalance.updateOne(
-      { id: normalizedId },
-      {
-        $set: {
-          lastGameSyncAt: new Date(),
-          gameIngestMarker: nextMarker,
-        },
-      }
-    ).catch(() => undefined);
+    if (stats.accepted > 0 || stats.duplicates > 0) {
+      const newest = sortedNew[0];
+      const nextMarker: IngestMarker = {
+        date: todayUTC,
+        lastTimestamp: String(newest.timestamp ?? ''),
+        lastSerial: String(newest.serial_number ?? ''),
+      };
+      await UserBalance.updateOne(
+        { id: normalizedId },
+        {
+          $set: {
+            lastGameSyncAt: new Date(),
+            gameIngestMarker: nextMarker,
+          },
+        }
+      ).catch(() => undefined);
+    }
 
     return {
       providerTotal: totalRecords,

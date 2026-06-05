@@ -24,6 +24,57 @@ type Normalized = {
   _docIndex?: number;
 };
 
+function collectInsertedIndices(result: {
+  insertedIds?: Record<string, unknown>;
+  insertedCount?: number;
+  getInsertedIds?: () => Array<{ index: number }>;
+  nInserted?: number;
+}): number[] {
+  if (result.insertedIds) {
+    return Object.keys(result.insertedIds).map((k) => parseInt(k, 10));
+  }
+  try {
+    const ids = result.getInsertedIds?.();
+    if (ids?.length) return ids.map((x) => x.index);
+  } catch {
+    /* ignore */
+  }
+  if (typeof result.insertedCount === 'number' && result.insertedCount > 0) {
+    return Array.from({ length: result.insertedCount }, (_, idx) => idx);
+  }
+  if (typeof result.nInserted === 'number' && result.nInserted > 0) {
+    return Array.from({ length: result.nInserted }, (_, idx) => idx);
+  }
+  return [];
+}
+
+/** Insert rows; return only indices Mongo reports as newly inserted (no fallback re-query). */
+async function insertGameTxnDocs(docsToInsert: Record<string, unknown>[]): Promise<number[]> {
+  try {
+    const res = await GameTxnRecord.collection.insertMany(docsToInsert, { ordered: false });
+    return collectInsertedIndices(res);
+  } catch (err: unknown) {
+    const bulkErr = err as {
+      insertedIds?: Record<string, unknown>;
+      insertedCount?: number;
+      getInsertedIds?: () => Array<{ index: number }>;
+      nInserted?: number;
+      result?: {
+        insertedIds?: Record<string, unknown>;
+        insertedCount?: number;
+        getInsertedIds?: () => Array<{ index: number }>;
+        nInserted?: number;
+      };
+    };
+    let partial = collectInsertedIndices(bulkErr);
+    if (!partial.length && bulkErr.result) {
+      partial = collectInsertedIndices(bulkErr.result);
+    }
+    if (partial.length) return partial;
+    throw err;
+  }
+}
+
 async function mapWithConcurrency<T, R>(items: T[], concurrency: number, fn: (t: T) => Promise<R>) {
   const results = new Array<R>(items.length);
   let i = 0;
@@ -166,7 +217,7 @@ export class TransactionService {
           continue;
         }
         const ubCache = cacheSbmToUb.get(n.sbmId);
-        if (!ubCache || !ubCache.ubId) {
+        if (!ubCache?.ubId || !ubCache.userId) {
           skippedNoBalance++;
           continue;
         }
@@ -177,7 +228,7 @@ export class TransactionService {
           memberAccount: n.member,
           sbmId: n.sbmId,
           userBalanceId: ubCache.ubId,
-          userId: ubCache.userId, // <-- NEW: insert userId from cache
+          userId: ubCache.userId,
           gameUid: n.gameUid,
           gameRound: n.roundId,
           currencyCode: n.currency,
@@ -185,8 +236,6 @@ export class TransactionService {
           win: n.win,
           providerTsUtc: n.tsUtc,
           alreadyTaken: n.alreadyTaken ?? false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         });
       }
 
@@ -197,23 +246,7 @@ export class TransactionService {
         return { accepted: 0, duplicates: duplicatesLocal, balancesUpdated: 0 };
       }
 
-      // Atomic upsert — balance/turnover only when this request actually inserts the txnId.
-      const upsertOps = docsToInsert.map((doc) => ({
-        updateOne: {
-          filter: { txnId: doc.txnId },
-          update: { $setOnInsert: doc },
-          upsert: true,
-        },
-      }));
-
-      const bulkRes = await GameTxnRecord.bulkWrite(upsertOps, { ordered: false });
-      const insertedIndices: number[] = [];
-      const upsertedIds = bulkRes.upsertedIds as Record<string, Types.ObjectId> | undefined;
-      if (upsertedIds) {
-        for (const key of Object.keys(upsertedIds)) {
-          insertedIndices.push(parseInt(key, 10));
-        }
-      }
+      const insertedIndices = await insertGameTxnDocs(docsToInsert);
 
       // Compute balance deltas only for inserted docs
       const balanceDelta = new Map<string, number>();
