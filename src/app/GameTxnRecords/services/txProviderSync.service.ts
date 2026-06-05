@@ -37,6 +37,9 @@ export type SyncUserResult = {
 const BATCH_SIZE = 50;
 const BATCH_DELAY_MS = 500;
 
+/** Prevent parallel sync-user calls from double-applying the same vendor rows. */
+const syncInflight = new Map<string, Promise<SyncUserResult>>();
+
 /**
  * Pulls vendor bet rows (testHuidu.php), ingests only records newer than the
  * per-user UTC-day marker, batches through /ingest logic for turnover + bulk insert.
@@ -164,6 +167,17 @@ export class TxProviderSyncService {
       throw new Error('Member id is required for game sync');
     }
 
+    const inflight = syncInflight.get(normalizedId);
+    if (inflight) return inflight;
+
+    const run = this.runSyncForUser(normalizedId).finally(() => {
+      syncInflight.delete(normalizedId);
+    });
+    syncInflight.set(normalizedId, run);
+    return run;
+  }
+
+  private async runSyncForUser(normalizedId: string): Promise<SyncUserResult> {
     const emptyStats = this.emptyIngestStats();
 
     const { records: vendorRecords, totalRecords } =
@@ -226,13 +240,6 @@ export class TxProviderSyncService {
       return tb.localeCompare(ta);
     });
 
-    const newest = sortedNew[0];
-    const nextMarker: IngestMarker = {
-      date: todayUTC,
-      lastTimestamp: String(newest.timestamp ?? ''),
-      lastSerial: String(newest.serial_number ?? ''),
-    };
-
     let stats: IngestStats = { ...emptyStats };
 
     for (let i = 0; i < sortedNew.length; i += BATCH_SIZE) {
@@ -246,10 +253,38 @@ export class TxProviderSyncService {
         skippedNoBalance: stats.skippedNoBalance + (batchStats.skippedNoBalance ?? 0),
       };
 
+      const batchNewest = batch.reduce((best, row) => {
+        const ts = String(row.timestamp ?? '');
+        const serial = String(row.serial_number ?? '');
+        if (!best) return { ts, serial };
+        if (ts > best.ts) return { ts, serial };
+        if (ts === best.ts && serial > best.serial) return { ts, serial };
+        return best;
+      }, null as { ts: string; serial: string } | null);
+
+      if (batchNewest) {
+        const batchMarker: IngestMarker = {
+          date: todayUTC,
+          lastTimestamp: batchNewest.ts,
+          lastSerial: batchNewest.serial,
+        };
+        await UserBalance.updateOne(
+          { id: normalizedId },
+          { $set: { lastGameSyncAt: new Date(), gameIngestMarker: batchMarker } }
+        ).catch(() => undefined);
+      }
+
       if (i + BATCH_SIZE < sortedNew.length) {
         await this.delay(BATCH_DELAY_MS);
       }
     }
+
+    const newest = sortedNew[0];
+    const nextMarker: IngestMarker = {
+      date: todayUTC,
+      lastTimestamp: String(newest.timestamp ?? ''),
+      lastSerial: String(newest.serial_number ?? ''),
+    };
 
     const refreshed = await UserBalance.findOne({ id: normalizedId })
       .select('currentBalance')

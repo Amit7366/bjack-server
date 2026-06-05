@@ -71,45 +71,53 @@ export class TransactionService {
     const cacheSbmToUb = new Map<string, { ubId: Types.ObjectId | null; userId: Types.ObjectId | null }>();
     const normalizedBatches: Normalized[][] = [];
 
-    // Normalize incoming records
-    for (let i = 0; i < records.length; i += BATCH_SIZE) {
-      const slice = records.slice(i, i + BATCH_SIZE);
-      const normalized: Normalized[] = [];
-      for (let j = 0; j < slice.length; j++) {
-        const r = slice[j];
-        const txnId = String(r.serial_number ?? '').trim();
-        const member = String(r.member_account ?? '').trim();
-        const sbmId = extractSbmId(member);
-        const gameUid = String(r.game_uid ?? '').trim();
-        const currency = (String(r.currency_code ?? '').trim() || 'INR').toUpperCase();
-        const bet = +(r.bet_amount ?? 0);
-        const win = +(r.win_amount ?? 0);
-        const agency = String(r.agency_uid ?? '');
-        const tsUtc = r.timestamp ? parseUtc(String(r.timestamp)) : new Date();
-        const roundId = r.game_round ? String(r.game_round) : null;
+    const seenTxnIds = new Set<string>();
+    const allNormalized: Normalized[] = [];
 
-        if (!txnId || !sbmId || !gameUid || Number.isNaN(bet) || Number.isNaN(win)) {
-          totalErrors++;
-          continue;
-        }
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      const txnId = String(r.serial_number ?? '').trim();
+      const member = String(r.member_account ?? '').trim();
+      const sbmId = extractSbmId(member);
+      const gameUid = String(r.game_uid ?? '').trim();
+      const currency = (String(r.currency_code ?? '').trim() || 'INR').toUpperCase();
+      const bet = +(r.bet_amount ?? 0);
+      const win = +(r.win_amount ?? 0);
+      const agency = String(r.agency_uid ?? '');
+      const tsUtc = r.timestamp ? parseUtc(String(r.timestamp)) : new Date();
+      const roundId = r.game_round ? String(r.game_round) : null;
 
-        normalized.push({
-          txnId,
-          member,
-          sbmId,
-          gameUid,
-          currency,
-          bet,
-          win,
-          agency,
-          tsUtc,
-          roundId,
-          delta: +(win - bet),
-          _docIndex: j,
-          alreadyTaken: false,
-        });
+      if (!txnId || !sbmId || !gameUid || Number.isNaN(bet) || Number.isNaN(win)) {
+        totalErrors++;
+        continue;
       }
-      if (normalized.length) normalizedBatches.push(normalized);
+
+      if (seenTxnIds.has(txnId)) {
+        totalDuplicates++;
+        continue;
+      }
+      seenTxnIds.add(txnId);
+
+      allNormalized.push({
+        txnId,
+        member,
+        sbmId,
+        gameUid,
+        currency,
+        bet,
+        win,
+        agency,
+        tsUtc,
+        roundId,
+        delta: +(win - bet),
+        _docIndex: i,
+        alreadyTaken: false,
+      });
+    }
+
+    for (let i = 0; i < allNormalized.length; i += BATCH_SIZE) {
+      const slice = allNormalized.slice(i, i + BATCH_SIZE);
+      if (slice.length) normalizedBatches.push(slice);
     }
 
     if (normalizedBatches.length === 0) {
@@ -189,49 +197,21 @@ export class TransactionService {
         return { accepted: 0, duplicates: duplicatesLocal, balancesUpdated: 0 };
       }
 
-      // Insert many with unordered for best throughput; gather inserted indices from result or error
-      let insertedIndices: number[] = [];
-      try {
-        const res = await GameTxnRecord.collection.insertMany(docsToInsert, { ordered: false });
-        if (res && res.insertedIds) {
-          insertedIndices = Object.keys(res.insertedIds).map((k) => parseInt(k, 10));
-        } else if (res && typeof res.insertedCount === 'number') {
-          const cnt = res.insertedCount ?? 0;
-          insertedIndices = Array.from({ length: cnt }, (_, idx) => idx);
-        }
-      } catch (err: any) {
-        // MongoBulkWriteError or similar — attempt to extract inserted indices from result
-        const result = err?.result ?? err?.writeResult ?? err;
-        if (result) {
-          try {
-            if (result?.getInsertedIds) {
-              const ids = result.getInsertedIds();
-              insertedIndices = ids.map((x: any) => x.index);
-            }
-          } catch { }
-          if (!insertedIndices.length && result.insertedIds) {
-            insertedIndices = Object.keys(result.insertedIds).map((k) => parseInt(k, 10));
-          }
-          if (!insertedIndices.length && typeof result.nInserted === 'number') {
-            insertedIndices = Array.from({ length: result.nInserted }, (_, idx) => idx);
-          }
-        }
-      }
+      // Atomic upsert — balance/turnover only when this request actually inserts the txnId.
+      const upsertOps = docsToInsert.map((doc) => ({
+        updateOne: {
+          filter: { txnId: doc.txnId },
+          update: { $setOnInsert: doc },
+          upsert: true,
+        },
+      }));
 
-      // As fallback, check which txnIds actually exist (in case duplicate key caused failure w/o insertedIds)
-      if (!insertedIndices.length) {
-        const txnIdsBatch = docsToInsert.map((d) => d.txnId);
-        const rows = await GameTxnRecord.find(
-          { txnId: { $in: txnIdsBatch } },
-          { txnId: 1, userBalanceId: 1, bet: 1, win: 1 }
-        ).lean();
-        const existingMap = new Map<string, any>();
-        for (const r of rows) existingMap.set(r.txnId, r);
-        for (let idx = 0; idx < docsToInsert.length; idx++) {
-          const txnId = docsToInsert[idx].txnId;
-          // Only count as "inserted" if it was not already present
-          // before this batch (prevents concurrent double-counting).
-          if (existingMap.has(txnId) && !existingSet.has(txnId)) insertedIndices.push(idx);
+      const bulkRes = await GameTxnRecord.bulkWrite(upsertOps, { ordered: false });
+      const insertedIndices: number[] = [];
+      const upsertedIds = bulkRes.upsertedIds as Record<string, Types.ObjectId> | undefined;
+      if (upsertedIds) {
+        for (const key of Object.keys(upsertedIds)) {
+          insertedIndices.push(parseInt(key, 10));
         }
       }
 
