@@ -3,6 +3,11 @@ import { Request, Response } from 'express';
 import * as GameService from './gameList.service';
 import sendResponse from '../utilis/sendResponse';
 
+function parseVendorQuery(vendor: unknown): string[] {
+  if (typeof vendor !== 'string' || !vendor.trim()) return [];
+  return [...new Set(vendor.split(',').map((s) => s.trim()).filter(Boolean))];
+}
+
 export const createGameHandler = async (req: Request, res: Response) => {
   const game = await GameService.createGame(req.body);
   sendResponse(res, {
@@ -57,6 +62,19 @@ export const getFilteredGamesHandler = async (req: Request, res: Response) => {
     statusCode: 200,
     success: true,
     message: 'Filtered games retrieved successfully',
+    data: result.data,
+    meta: result.meta,
+  });
+};
+
+export const getVendorGamesHandler = async (req: Request, res: Response) => {
+  const vendorCodes = parseVendorQuery(req.query.vendor);
+  const result = await GameService.getVendorGames(vendorCodes);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Vendor games retrieved successfully',
     data: result.data,
     meta: result.meta,
   });

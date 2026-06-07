@@ -6,6 +6,9 @@
   "scripts": {
     "start:dev": "ts-node-dev --respawn --transpile-only ./src/server.ts",
     "seed:games": "ts-node src/scripts/seedGameCatalog.ts",
+    "seed:home-games": "ts-node src/scripts/seedHomeGames.ts",
+    "seed:exclusive-games": "ts-node src/scripts/seedExclusiveGames.ts",
+    "seed:vendor-games": "ts-node src/scripts/seedVendorGames.ts",
     "seed:leads": "ts-node src/teleSalesLeads/seedTeleSalesLeads.ts",
     "worker:callback": "ts-node src/app/GameCallback/queue/callbackQueue.consumer.ts",
     "start:prod": "node ./dist/server.js",

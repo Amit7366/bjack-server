@@ -10,6 +10,8 @@ import { MessageRoutes } from '../Message/message.route';
 import { ChatRoomRoutes } from '../ChatRoom/chatRoom.route';
 import { WeeklyRewardRoutes } from '../WeeklyReward/routes/weeklyReward.routes';
 import { GameListRoutes } from '../GameList/gameList.route';
+import { HomeGamesRoutes } from '../HomeGames/homeGames.route';
+import { ExclusiveGamesRoutes } from '../ExclusiveGames/exclusiveGames.route';
 import { UserWalletRoutes } from '../UserWallet/userWallet.route';
 import { TeleSalesLeadsRoutes } from '../../teleSalesLeads/teleSalesLeads.route';
 import { BetTxnRoutes } from '../Bet/betTxn.routes';
@@ -39,6 +41,8 @@ const moduleRoutes = [
   { path: '/bet-txns', route: BetTxnRoutes },
   { path: '/gameRecords-txns', route: gametxnrecordsRoute },
   { path: '/allgames', route: GameListRoutes },
+  { path: '/home-games', route: HomeGamesRoutes },
+  { path: '/exclusive-games', route: ExclusiveGamesRoutes },
   { path: '/wallets', route: UserWalletRoutes },
   { path: '/weeklyReward', route: WeeklyRewardRoutes },
   { path: '/tele', route: TeleSalesLeadsRoutes },

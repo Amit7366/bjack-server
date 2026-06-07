@@ -35,11 +35,11 @@ async function resolveCatalogTypes(gameCodes: string[]): Promise<Map<string, str
   if (!gameCodes.length) return new Map();
 
   const rows = await GameCatalogModel.find(
-    { game_code: { $in: gameCodes } },
-    { game_code: 1, game_type: 1 }
+    { gameCode: { $in: gameCodes } },
+    { gameCode: 1, game_type: 1 }
   ).lean();
 
-  return new Map(rows.map((g) => [String(g.game_code), String(g.game_type)]));
+  return new Map(rows.map((g) => [String(g.gameCode), String(g.game_type)]));
 }
 
 async function findDepositTracker(userId: Types.ObjectId) {

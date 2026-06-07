@@ -14,7 +14,8 @@ import { USER_ROLE } from '../User/user.constant';
 const router = express.Router();
 
 // ✅ PUBLIC ROUTES (must come before "/:id")
-router.get('/', GameController.getFilteredGamesHandler); // Supports: ?provider=jdb&category=slot
+router.get('/', GameController.getFilteredGamesHandler); // ?provider=jdb&category=slot OR ?vendor=awcv2_jili
+router.get('/vendor', GameController.getVendorGamesHandler); // ?vendor=awcv2_jili,awcv2_pgsoft
 router.get('/group-by-provider', GameController.groupByProviderHandler);
 router.get('/group-by-category', GameController.groupByCategoryHandler);
 
