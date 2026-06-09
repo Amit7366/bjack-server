@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { UserBalance } from '../../Transaction/userBalance.model';
 import type { ProviderRecord } from '../types/provider';
 import { TransactionService } from './transaction.service';
@@ -34,16 +35,40 @@ export type SyncUserResult = {
   skippedReason?: 'no_provider_records' | 'no_new_records';
 };
 
+export type PreviewSyncResult = {
+  estimatedBalance: number;
+  netDelta: number;
+  newRecords: number;
+  providerTotal: number;
+  currentBalance: number;
+  syncToken: string;
+  walletRevision: number;
+  syncedAt: string;
+  skippedReason?: 'no_provider_records' | 'no_new_records';
+};
+
+export type PersistJobStatus = {
+  syncToken: string;
+  sbmId: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  previewBalance?: number;
+  dbBalance?: number;
+  drift?: number;
+  error?: string;
+  startedAt: string;
+  completedAt?: string;
+};
+
 const BATCH_SIZE = 50;
+const BATCH_SIZE_URGENT = 200;
 const BATCH_DELAY_MS = 500;
 
-/** Prevent parallel sync-user calls from double-applying the same vendor rows. */
 const syncInflight = new Map<string, Promise<SyncUserResult>>();
+const previewInflight = new Map<string, Promise<PreviewSyncResult>>();
+const persistInflight = new Map<string, Promise<void>>();
+const persistJobs = new Map<string, PersistJobStatus>();
+const persistByUser = new Map<string, string>();
 
-/**
- * Pulls vendor bet rows (testHuidu.php), ingests only records newer than the
- * per-user UTC-day marker, batches through /ingest logic for turnover + bulk insert.
- */
 export class TxProviderSyncService {
   constructor(
     private readonly providerBaseUrl =
@@ -51,10 +76,14 @@ export class TxProviderSyncService {
     private readonly txService = new TransactionService()
   ) {}
 
-  private buildProviderUrl(sbmId: string): string {
+  private buildProviderUrl(sbmId: string, fromMs?: number): string {
     const base = this.providerBaseUrl.replace(/\/$/, '');
     const separator = base.includes('?') ? '&' : '?';
-    return `${base}${separator}user=${encodeURIComponent(sbmId)}`;
+    let url = `${base}${separator}user=${encodeURIComponent(sbmId)}`;
+    if (fromMs != null && fromMs > 0) {
+      url += `&from=${fromMs}`;
+    }
+    return url;
   }
 
   private delay(ms: number) {
@@ -102,15 +131,30 @@ export class TxProviderSyncService {
     };
   }
 
-  private async fetchProviderRecords(sbmId: string): Promise<{
-    records: ProviderRecord[];
-    totalRecords: number;
-  }> {
+  private markerFromMs(marker: IngestMarker): number | undefined {
+    if (!marker.lastTimestamp) return undefined;
+    const parsed = Number(marker.lastTimestamp);
+    if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+    return Math.max(0, parsed - 60_000);
+  }
+
+  private computeNetDelta(records: ProviderRecord[]): number {
+    return records.reduce((sum, r) => {
+      const bet = Number(r.bet_amount ?? 0);
+      const win = Number(r.win_amount ?? 0);
+      return sum + (win - bet);
+    }, 0);
+  }
+
+  private async fetchProviderRecords(
+    sbmId: string,
+    fromMs?: number
+  ): Promise<{ records: ProviderRecord[]; totalRecords: number }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15_000);
 
     try {
-      const response = await fetch(this.buildProviderUrl(sbmId), {
+      const response = await fetch(this.buildProviderUrl(sbmId, fromMs), {
         method: 'GET',
         headers: { Accept: 'application/json' },
         signal: controller.signal,
@@ -161,6 +205,183 @@ export class TxProviderSyncService {
     };
   }
 
+  private async loadBalanceContext(normalizedId: string) {
+    const balanceDoc = await UserBalance.findOne({ id: normalizedId })
+      .select('currentBalance gameIngestMarker walletRevision')
+      .lean();
+
+    const todayUTC = this.todayUtc();
+    let marker = this.readMarker(balanceDoc?.gameIngestMarker);
+    if (marker.date !== todayUTC) {
+      marker = { date: todayUTC, lastTimestamp: '', lastSerial: '' };
+    }
+
+    return {
+      currentBalance: Number(balanceDoc?.currentBalance ?? 0),
+      walletRevision: Number(balanceDoc?.walletRevision ?? 0),
+      marker,
+      fromMs: this.markerFromMs(marker),
+    };
+  }
+
+  private filterNewRecords(vendorRecords: ProviderRecord[], marker: IngestMarker) {
+    return vendorRecords.filter((r) =>
+      this.isRecordNewer(
+        String(r.timestamp ?? ''),
+        String(r.serial_number ?? ''),
+        marker.lastTimestamp,
+        marker.lastSerial
+      )
+    );
+  }
+
+  async previewForUser(sbmId: string): Promise<PreviewSyncResult> {
+    const normalizedId = sbmId.trim().toLowerCase();
+    if (!normalizedId) {
+      throw new Error('Member id is required for game sync');
+    }
+
+    const inflight = previewInflight.get(normalizedId);
+    if (inflight) return inflight;
+
+    const run = this.runPreviewForUser(normalizedId).finally(() => {
+      previewInflight.delete(normalizedId);
+    });
+    previewInflight.set(normalizedId, run);
+    return run;
+  }
+
+  private async runPreviewForUser(normalizedId: string): Promise<PreviewSyncResult> {
+    const { currentBalance, walletRevision, marker, fromMs } =
+      await this.loadBalanceContext(normalizedId);
+
+    const { records: vendorRecords, totalRecords } = await this.fetchProviderRecords(
+      normalizedId,
+      fromMs
+    );
+
+    if (!vendorRecords.length) {
+      return {
+        estimatedBalance: currentBalance,
+        netDelta: 0,
+        newRecords: 0,
+        providerTotal: totalRecords,
+        currentBalance,
+        syncToken: randomUUID(),
+        walletRevision,
+        syncedAt: new Date().toISOString(),
+        skippedReason: 'no_provider_records',
+      };
+    }
+
+    const newRecords = this.filterNewRecords(vendorRecords, marker);
+
+    if (newRecords.length === 0) {
+      return {
+        estimatedBalance: currentBalance,
+        netDelta: 0,
+        newRecords: 0,
+        providerTotal: totalRecords,
+        currentBalance,
+        syncToken: randomUUID(),
+        walletRevision,
+        syncedAt: new Date().toISOString(),
+        skippedReason: 'no_new_records',
+      };
+    }
+
+    const netDelta = this.computeNetDelta(newRecords);
+    const estimatedBalance = +(currentBalance + netDelta).toFixed(2);
+    const syncToken = randomUUID();
+
+    persistJobs.set(syncToken, {
+      syncToken,
+      sbmId: normalizedId,
+      status: 'queued',
+      previewBalance: estimatedBalance,
+      startedAt: new Date().toISOString(),
+    });
+
+    return {
+      estimatedBalance,
+      netDelta,
+      newRecords: newRecords.length,
+      providerTotal: totalRecords,
+      currentBalance,
+      syncToken,
+      walletRevision,
+      syncedAt: new Date().toISOString(),
+    };
+  }
+
+  enqueuePersist(sbmId: string, syncToken?: string): { syncToken: string; status: string } {
+    const normalizedId = sbmId.trim().toLowerCase();
+    if (!normalizedId) {
+      throw new Error('Member id is required for game sync');
+    }
+
+    const existingToken = persistByUser.get(normalizedId);
+    if (existingToken) {
+      const existingJob = persistJobs.get(existingToken);
+      if (existingJob && (existingJob.status === 'queued' || existingJob.status === 'running')) {
+        return { syncToken: existingToken, status: existingJob.status };
+      }
+    }
+
+    const token = syncToken ?? randomUUID();
+    if (!persistJobs.has(token)) {
+      persistJobs.set(token, {
+        syncToken: token,
+        sbmId: normalizedId,
+        status: 'queued',
+        startedAt: new Date().toISOString(),
+      });
+    }
+
+    persistByUser.set(normalizedId, token);
+
+    const inflight = persistInflight.get(normalizedId);
+    if (!inflight) {
+      const job = this.runPersistForUser(normalizedId, token).finally(() => {
+        persistInflight.delete(normalizedId);
+      });
+      persistInflight.set(normalizedId, job);
+    }
+
+    return { syncToken: token, status: 'queued' };
+  }
+
+  getPersistStatus(syncToken: string): PersistJobStatus | null {
+    return persistJobs.get(syncToken) ?? null;
+  }
+
+  private async runPersistForUser(normalizedId: string, syncToken: string): Promise<void> {
+    const job = persistJobs.get(syncToken);
+    if (job) {
+      job.status = 'running';
+    }
+
+    try {
+      const result = await this.runSyncForUser(normalizedId, { urgent: true });
+      const previewBalance = job?.previewBalance ?? result.currentBalance;
+      const drift = Math.abs(result.currentBalance - previewBalance);
+
+      if (job) {
+        job.status = 'completed';
+        job.dbBalance = result.currentBalance;
+        job.drift = drift;
+        job.completedAt = new Date().toISOString();
+      }
+    } catch (err: unknown) {
+      if (job) {
+        job.status = 'failed';
+        job.error = err instanceof Error ? err.message : 'Persist failed';
+        job.completedAt = new Date().toISOString();
+      }
+      throw err;
+    }
+  }
+
   async syncForUser(sbmId: string): Promise<SyncUserResult> {
     const normalizedId = sbmId.trim().toLowerCase();
     if (!normalizedId) {
@@ -177,17 +398,20 @@ export class TxProviderSyncService {
     return run;
   }
 
-  private async runSyncForUser(normalizedId: string): Promise<SyncUserResult> {
+  private async runSyncForUser(
+    normalizedId: string,
+    opts?: { urgent?: boolean }
+  ): Promise<SyncUserResult> {
     const emptyStats = this.emptyIngestStats();
+    const batchSize = opts?.urgent ? BATCH_SIZE_URGENT : BATCH_SIZE;
+    const batchDelay = opts?.urgent ? 0 : BATCH_DELAY_MS;
 
-    const { records: vendorRecords, totalRecords } =
-      await this.fetchProviderRecords(normalizedId);
+    const { currentBalance, marker, fromMs } = await this.loadBalanceContext(normalizedId);
 
-    const balanceDoc = await UserBalance.findOne({ id: normalizedId })
-      .select('currentBalance gameIngestMarker')
-      .lean();
-
-    const currentBalance = Number(balanceDoc?.currentBalance ?? 0);
+    const { records: vendorRecords, totalRecords } = await this.fetchProviderRecords(
+      normalizedId,
+      fromMs
+    );
 
     if (!vendorRecords.length) {
       return {
@@ -201,19 +425,7 @@ export class TxProviderSyncService {
     }
 
     const todayUTC = this.todayUtc();
-    let marker = this.readMarker(balanceDoc?.gameIngestMarker);
-    if (marker.date !== todayUTC) {
-      marker = { date: todayUTC, lastTimestamp: '', lastSerial: '' };
-    }
-
-    const newRecords = vendorRecords.filter((r) =>
-      this.isRecordNewer(
-        String(r.timestamp ?? ''),
-        String(r.serial_number ?? ''),
-        marker.lastTimestamp,
-        marker.lastSerial
-      )
-    );
+    const newRecords = this.filterNewRecords(vendorRecords, marker);
 
     if (newRecords.length === 0) {
       await UserBalance.updateOne(
@@ -242,8 +454,8 @@ export class TxProviderSyncService {
 
     let stats: IngestStats = { ...emptyStats };
 
-    for (let i = 0; i < sortedNew.length; i += BATCH_SIZE) {
-      const batch = sortedNew.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < sortedNew.length; i += batchSize) {
+      const batch = sortedNew.slice(i, i + batchSize);
       const batchStats = await this.postIngestBatch(batch);
       stats = {
         accepted: stats.accepted + (batchStats.accepted ?? 0),
@@ -253,14 +465,17 @@ export class TxProviderSyncService {
         skippedNoBalance: stats.skippedNoBalance + (batchStats.skippedNoBalance ?? 0),
       };
 
-      const batchNewest = batch.reduce((best, row) => {
-        const ts = String(row.timestamp ?? '');
-        const serial = String(row.serial_number ?? '');
-        if (!best) return { ts, serial };
-        if (ts > best.ts) return { ts, serial };
-        if (ts === best.ts && serial > best.serial) return { ts, serial };
-        return best;
-      }, null as { ts: string; serial: string } | null);
+      const batchNewest = batch.reduce(
+        (best, row) => {
+          const ts = String(row.timestamp ?? '');
+          const serial = String(row.serial_number ?? '');
+          if (!best) return { ts, serial };
+          if (ts > best.ts) return { ts, serial };
+          if (ts === best.ts && serial > best.serial) return { ts, serial };
+          return best;
+        },
+        null as { ts: string; serial: string } | null
+      );
 
       const batchProcessed =
         (batchStats.accepted ?? 0) > 0 || (batchStats.duplicates ?? 0) > 0;
@@ -276,8 +491,8 @@ export class TxProviderSyncService {
         ).catch(() => undefined);
       }
 
-      if (i + BATCH_SIZE < sortedNew.length) {
-        await this.delay(BATCH_DELAY_MS);
+      if (batchDelay > 0 && i + batchSize < sortedNew.length) {
+        await this.delay(batchDelay);
       }
     }
 

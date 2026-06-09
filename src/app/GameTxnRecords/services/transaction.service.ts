@@ -267,7 +267,7 @@ export class TransactionService {
         balanceOps.push({
           updateOne: {
             filter: { _id: new Types.ObjectId(ubIdStr) },
-            update: { $inc: { currentBalance: sumDelta } },
+            update: { $inc: { currentBalance: sumDelta, walletRevision: 1 } },
           },
         });
       }

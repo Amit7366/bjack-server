@@ -9,11 +9,28 @@ const tx = new TransactionsController();
 const gameTxnController = new GameTxnRecordsController();
 router.post('/api/transactions/ingest', tx.ingest);
 
-/** After play: incremental sync from txserver for logged-in member only. */
 router.post(
   '/api/transactions/sync-user',
   auth(USER_ROLE.user),
   tx.syncUser
+);
+
+router.post(
+  '/api/transactions/sync-user/preview',
+  auth(USER_ROLE.user),
+  tx.previewSyncUser
+);
+
+router.post(
+  '/api/transactions/sync-user/persist',
+  auth(USER_ROLE.user),
+  tx.persistSyncUser
+);
+
+router.get(
+  '/api/transactions/sync-user/persist-status',
+  auth(USER_ROLE.user),
+  tx.persistSyncStatus
 );
 
 router.get(

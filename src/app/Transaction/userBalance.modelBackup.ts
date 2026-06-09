@@ -31,8 +31,6 @@ const userBalanceSchema = new Schema(
       lastTimestamp: { type: String, default: '' },
       lastSerial: { type: String, default: '' },
     },
-    /** Incremented on every balance write — clients compare for cross-device sync. */
-    walletRevision: { type: Number, default: 0 },
   },
   { timestamps: true, versionKey: false }
 );
