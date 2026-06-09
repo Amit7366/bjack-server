@@ -104,7 +104,7 @@ app.options('*', cors(corsOptions));
 
 /** Health check */
 app.get('/', (_req: Request, res: Response) => {
-  res.send('🔥 App is Running hot');
+  res.send('🔥 App is Running');
 });
 
 
