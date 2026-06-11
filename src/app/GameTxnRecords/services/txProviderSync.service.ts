@@ -72,7 +72,7 @@ const persistByUser = new Map<string, string>();
 export class TxProviderSyncService {
   constructor(
     private readonly providerBaseUrl =
-      process.env.GAME_TX_PROVIDER_URL ?? 'https://txserver.site/testHuidu.php',
+      process.env.GAME_TX_PROVIDER_URL ?? 'https://txserver.site/huidu.php',
     private readonly txService = new TransactionService()
   ) {}
 
