@@ -1,9 +1,28 @@
 // src/UserWallet/userWallet.service.ts
 
-import { UserWallet } from "./userWallet.model";
+import httpStatus from 'http-status';
+import AppError from '../errors/AppError';
+import { UserWallet } from './userWallet.model';
 
+export const MAX_WALLETS_PER_USER = 5;
 
 export const createUserWallet = async (payload: any) => {
+  const walletCount = await UserWallet.countDocuments({ userId: payload.userId });
+  if (walletCount >= MAX_WALLETS_PER_USER) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `You can save a maximum of ${MAX_WALLETS_PER_USER} wallets`
+    );
+  }
+
+  const duplicate = await UserWallet.findOne({
+    userId: payload.userId,
+    walletNumber: payload.walletNumber,
+  });
+  if (duplicate) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'This wallet number is already saved');
+  }
+
   if (payload.isDefault) {
     // unset any existing default wallets for the user
     await UserWallet.updateMany(
