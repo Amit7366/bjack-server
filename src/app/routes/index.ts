@@ -26,6 +26,7 @@ import { PromotionRoutes } from '../Promotion/promotion.route';
 import ReferralRoutes from '../Referral/referral.routes';
 import { MemberBonusRewardRoutes } from '../MemberBonusReward/memberBonusReward.route';
 import { SignInRewardRoutes } from '../SignInReward/signInReward.route';
+import { GameEligibilityRoutes } from '../GameEligibility/gameEligibility.route';
 import { KycRoutes } from '../Kyc/kyc.route';
 
 const router = Router();
@@ -58,6 +59,7 @@ const moduleRoutes = [
   { path: '/referral', route: ReferralRoutes },
   { path: '/sign-in-reward', route: SignInRewardRoutes },
   { path: '/member-bonus-reward', route: MemberBonusRewardRoutes },
+  { path: '/games/eligibility', route: GameEligibilityRoutes },
   { path: '/kyc', route: KycRoutes },
 ];
 

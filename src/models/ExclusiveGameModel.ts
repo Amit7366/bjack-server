@@ -6,6 +6,7 @@ const exclusiveGameSchema = new Schema(
     gameId: { type: String },
     gameCode: { type: String },
     title: { type: String },
+    game_type: { type: String, index: true, default: 'slot' },
     sortOrder: { type: Number, default: 0 },
   },
   { timestamps: true },

@@ -8,6 +8,7 @@ export const getHomeGames = async () => {
     providerKey: g.providerKey,
     providerLabel: g.providerLabel,
     gameCode: g.gameCode,
+    game_type: g.game_type ?? 'slot',
     gradient: g.gradient,
     glow: g.glow,
     emoji: g.emoji,

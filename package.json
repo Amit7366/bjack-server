@@ -9,6 +9,7 @@
     "seed:home-games": "ts-node src/scripts/seedHomeGames.ts",
     "seed:exclusive-games": "ts-node src/scripts/seedExclusiveGames.ts",
     "seed:vendor-games": "ts-node src/scripts/seedVendorGames.ts",
+    "seed:game-types": "ts-node src/scripts/seedGameTypes.ts",
     "seed:leads": "ts-node src/teleSalesLeads/seedTeleSalesLeads.ts",
     "worker:callback": "ts-node src/app/GameCallback/queue/callbackQueue.consumer.ts",
     "start:prod": "node ./dist/server.js",

@@ -7,5 +7,6 @@ export const getExclusiveGames = async () => {
     gameId: s.gameId,
     gameCode: s.gameCode,
     title: s.title,
+    game_type: s.game_type ?? 'slot',
   }));
 };

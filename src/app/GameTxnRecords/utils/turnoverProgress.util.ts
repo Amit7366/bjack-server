@@ -15,25 +15,10 @@ type InsertedBetDoc = {
   bet?: number;
 };
 
-/** Map catalog / promo labels to a shared turnover bucket. */
-export function normalizeTurnoverGameType(raw: string): string {
-  const s = String(raw ?? '').trim().toLowerCase();
-  if (!s || s === 'all') return 'all';
-  if (s === 'fish' || s === 'fishing' || s.includes('fish')) return 'fishing';
-  if (s.includes('slot')) return 'slot';
-  if (s.includes('live')) return 'live';
-  return s;
-}
-
-function isBetEligible(eligible: string[], catalogType: string | undefined): boolean {
-  const normalizedEligible = (eligible ?? []).map(normalizeTurnoverGameType);
-  if (normalizedEligible.includes('all')) return true;
-  if (normalizedEligible.includes('none')) return false;
-  if (!catalogType) return false;
-
-  const betType = normalizeTurnoverGameType(catalogType);
-  return normalizedEligible.some((e) => e === betType);
-}
+import {
+  isGameTypeEligible,
+  normalizeTurnoverGameType,
+} from '../../GameEligibility/gameType.util';
 
 async function resolveCatalogTypes(gameCodes: string[]): Promise<Map<string, string>> {
   if (!gameCodes.length) return new Map();
@@ -86,7 +71,7 @@ function sumEligibleBet(
     }
 
     const catalogType = catalogByCode.get(String(d.gameUid ?? ''));
-    if (isBetEligible(eligible, catalogType)) {
+    if (isGameTypeEligible(eligible, catalogType)) {
       total += bet;
     }
   }

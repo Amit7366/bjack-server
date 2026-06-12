@@ -757,7 +757,12 @@ export const markDepositSuccess = async (
   const effectiveTurnoverRequired = promoActuallyApplied
     ? (Number(trx.amount) + Number(bonusAmount)) * Number(turnoverX)
     : Number(trx.amount) * 1;
-  const effectiveEligibleGames = promoActuallyApplied ? eligibleGames : ['all'];
+  const effectiveEligibleGames =
+    !promoActuallyApplied ||
+    !eligibleGames?.length ||
+    eligibleGames.includes('all')
+      ? ['all']
+      : eligibleGames;
   const effectivePromoCode = promoActuallyApplied ? selectedPromoCode : 'NO_PROMO';
   const effectiveUsageType = promoActuallyApplied ? usageType : 'none';
 

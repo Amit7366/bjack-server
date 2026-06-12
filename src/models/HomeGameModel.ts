@@ -7,6 +7,7 @@ const homeGameSchema = new Schema(
     providerKey: { type: String, required: true },
     providerLabel: { type: String, required: true },
     gameCode: { type: String },
+    game_type: { type: String, index: true, default: 'slot' },
     gradient: { type: String, required: true },
     glow: { type: String, required: true },
     emoji: { type: String },

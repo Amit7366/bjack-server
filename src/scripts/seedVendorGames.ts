@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { vendorGames } from '../data/vendorGamesData';
 import { GameCatalogModel } from '../models/GameCatalogModel';
 import { connectSeedDb } from './seedUtils';
+import { inferGameTypeFromTitle, normalizeTurnoverGameType } from '../app/GameEligibility/gameType.util';
 
 dotenv.config();
 
@@ -23,6 +24,10 @@ const seedVendorGames = async () => {
     let updatedCount = 0;
 
     for (const game of vendorGames) {
+      const gameType = normalizeTurnoverGameType(
+        game.types?.[0] ?? inferGameTypeFromTitle(game.title, game.vendorCode)
+      );
+
       const doc: Record<string, unknown> = {
         tileId: game.tileId,
         title: game.title,
@@ -31,12 +36,12 @@ const seedVendorGames = async () => {
         gradient: game.gradient,
         glow: game.glow,
         image: game.image,
-        types: game.types ?? [],
+        types: game.types?.length ? game.types : [gameType],
         vendorCode: game.vendorCode,
         sortOrder: game.sortOrder,
         game_name: game.title,
         game_image: game.image,
-        game_type: game.types?.[0] ?? 'slot',
+        game_type: gameType,
       };
 
       if (game.gameCode) {

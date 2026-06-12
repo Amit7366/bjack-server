@@ -3,6 +3,7 @@ export type ExclusiveGameSeed = {
   gameId?: string;
   gameCode?: string;
   title?: string;
+  game_type?: string;
   sortOrder: number;
 };
 
@@ -24,15 +25,19 @@ const exclusiveCarouselBannerImages = [
 ];
 
 /** i18n keys + game codes aligned with home popular strip order. */
-const popularGameRefs = [
-  { gameId: 'aviator', gameCode: 'a04d1f3eb8ccec8a4823bdf18e3f0e84' },
-  { gameId: 'superAcePlus', gameCode: '80aad2a10ae6a95068b50160d6c78897' },
-  { gameId: 'treasuresAztec', gameCode: '2fa9a84d096d6ff0bab53f81b79876c8' },
-  { gameId: 'fortuneGems', gameCode: '63927e939636f45e9d6d0b3717b3b1c1' },
-  { gameId: 'fortuneGaruda', gameCode: 'aa609892f551de2053e92427dc4ae17f' },
-  { gameId: 'fortuneRabbit', gameCode: 'e175cdd3215a02f5539cc8354a149b75' },
-  { gameId: 'bjMoneyWheel', gameCode: '6e19e03c50f035ddd9ffd804c30f8c80' },
-  { gameId: 'boxingKing', gameCode: '981f5f9675002fbeaaf24c4128b938d7' },
+const popularGameRefs: Array<{
+  gameId: string;
+  gameCode: string;
+  game_type: string;
+}> = [
+  { gameId: 'aviator', gameCode: 'a04d1f3eb8ccec8a4823bdf18e3f0e84', game_type: 'crash' },
+  { gameId: 'superAcePlus', gameCode: '80aad2a10ae6a95068b50160d6c78897', game_type: 'slot' },
+  { gameId: 'treasuresAztec', gameCode: '2fa9a84d096d6ff0bab53f81b79876c8', game_type: 'slot' },
+  { gameId: 'fortuneGems', gameCode: '63927e939636f45e9d6d0b3717b3b1c1', game_type: 'slot' },
+  { gameId: 'fortuneGaruda', gameCode: 'aa609892f551de2053e92427dc4ae17f', game_type: 'slot' },
+  { gameId: 'fortuneRabbit', gameCode: 'e175cdd3215a02f5539cc8354a149b75', game_type: 'slot' },
+  { gameId: 'bjMoneyWheel', gameCode: '6e19e03c50f035ddd9ffd804c30f8c80', game_type: 'live' },
+  { gameId: 'boxingKing', gameCode: '981f5f9675002fbeaaf24c4128b938d7', game_type: 'slot' },
 ];
 
 export const exclusiveGames: ExclusiveGameSeed[] = exclusiveCarouselBannerImages.map(
@@ -42,6 +47,7 @@ export const exclusiveGames: ExclusiveGameSeed[] = exclusiveCarouselBannerImages
       image,
       gameId: ref.gameId,
       gameCode: ref.gameCode,
+      game_type: ref.game_type,
       sortOrder: index,
     };
   },
