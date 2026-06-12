@@ -25,14 +25,26 @@ const validateParams =
 
 /// ✅ user endpoints (any logged-in user)
 router.get(
-  "/status/:id",
-  auth(USER_ROLE.user, USER_ROLE.admin, USER_ROLE.superAdmin), // include roles you allow
+  '/me/status',
+  auth(USER_ROLE.user, USER_ROLE.admin, USER_ROLE.superAdmin),
+  SpinController.meStatus
+);
+
+router.post(
+  '/play',
+  auth(USER_ROLE.user, USER_ROLE.admin, USER_ROLE.superAdmin),
+  SpinController.play
+);
+
+router.get(
+  '/status/:id',
+  auth(USER_ROLE.user, USER_ROLE.admin, USER_ROLE.superAdmin),
   validateParams(statusSpinSchema),
   SpinController.status
 );
 
 router.post(
-  "/claim",
+  '/claim',
   auth(USER_ROLE.user, USER_ROLE.admin, USER_ROLE.superAdmin),
   validateRequest(claimSpinSchema),
   SpinController.claim
