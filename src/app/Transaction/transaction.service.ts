@@ -796,8 +796,8 @@ const getUserBalance = async (memberOrUserId: string) => {
 
   let balance = null;
 
-  // Member id on UserBalance.id (e.g. sbm47374) — same as login lookup
-  if (/^sbm/i.test(raw)) {
+  // Member id on UserBalance.id (e.g. sbm47374, bkb47703) — same as login lookup
+  if (/^(?:sbm|bkb)/i.test(raw)) {
     balance = await UserBalance.findOne({ id: raw.toLowerCase() })
       .lean()
       .maxTimeMS(2000)
