@@ -4,6 +4,10 @@ import { TurnoverTracking } from '../../UserPromotion/turnoverTracking.model';
 import { SignupBonusTracking } from '../../User/signupBonusTracking.model';
 import { ReferralBonusTracking } from '../../ReferralRewardTracker/referralBonusTracking.model';
 import { LoginBonusTracking } from '../../User/loginBonusTracking.model';
+import {
+  ensureReferralTurnoverTracking,
+  payReferralTurnoverRewards,
+} from '../../ReferralRewardTracker/referralTurnoverReward.util';
 
 type InsertedBetDoc = {
   userId?: Types.ObjectId | string;
@@ -108,6 +112,8 @@ export async function applyTurnoverForInsertedBets(
 
   const userIds = [...userIdsSet];
   if (!userIds.length) return;
+
+  await Promise.all(userIds.map((id) => ensureReferralTurnoverTracking(id)));
 
   const catalogByCode = await resolveCatalogTypes([...gameCodesSet]);
   const userObjectIds = userIds.map((id) => new Types.ObjectId(id));
@@ -243,4 +249,6 @@ export async function applyTurnoverForInsertedBets(
       ? LoginBonusTracking.bulkWrite(loginBulkOps, { ordered: false }).catch(() => undefined)
       : Promise.resolve(),
   ]);
+
+  await payReferralTurnoverRewards(userIds).catch(() => undefined);
 }

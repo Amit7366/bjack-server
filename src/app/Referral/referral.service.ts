@@ -2,6 +2,11 @@ import mongoose, { Types } from "mongoose";
 import { ReferralModel } from "../Referral/referral.model";
 import { ReferralRewardModel } from "../ReferralRewardTracker/referralReward.model";
 import { ReferralBonusTracking } from "../ReferralRewardTracker/referralBonusTracking.model";
+import {
+  ensureReferralTurnoverTracking,
+  payReferralTurnoverRewards,
+} from "../ReferralRewardTracker/referralTurnoverReward.util";
+import { REFERRED_TURNOVER_THRESHOLD } from "../ReferralRewardTracker/referralTurnoverReward.constants";
 import { NormalUser } from "../NormalUser/normalUser.model";
 import { User } from "../User/user.model";
 import { UserBalance } from "../Transaction/userBalance.model";
@@ -13,7 +18,7 @@ import httpStatus from "http-status";
  * - Idempotent: won’t create duplicates.
  * - Ensures a reward summary doc for the referrer.
  * - Increments totalReferred **only** on first insert.
- * - No bonus credit here; payout happens in releaseReferralBonuses on first deposit.
+ * - No bonus credit here; payout happens automatically when referred user completes turnover.
  */
 export const trackReferral = async (
   referredUserId: string,
@@ -64,6 +69,10 @@ export const trackReferral = async (
     }
 
     if (ownSession) await session.commitTransaction();
+
+    if (firstInsert) {
+      await ensureReferralTurnoverTracking(referredUserId);
+    }
   } catch (err) {
     if (ownSession) await session.abortTransaction();
     throw err;
@@ -77,6 +86,9 @@ export type ReferredUserRow = {
   username: string;
   totalDeposit: number;
   referredAt: string;
+  turnoverCompleted: number;
+  turnoverRequired: number;
+  rewardPaid: boolean;
 };
 
 export type MyReferralSummary = {
@@ -104,11 +116,21 @@ export const getMyReferredUsers = async (userId: string): Promise<ReferredUserRo
   if (!referrals.length) return [];
 
   const referredIds = referrals.map((r) => r.referredUser);
+  const referredIdStrings = referredIds.map((id) => String(id));
 
-  const [users, balances, normalUsers] = await Promise.all([
+  await Promise.all(referredIdStrings.map((id) => ensureReferralTurnoverTracking(id)));
+  await payReferralTurnoverRewards(referredIdStrings);
+
+  const [users, balances, normalUsers, turnoverTrackers] = await Promise.all([
     User.find({ _id: { $in: referredIds } }).select("userName id").lean(),
     UserBalance.find({ userId: { $in: referredIds } }).select("userId totalDeposit").lean(),
     NormalUser.find({ user: { $in: referredIds } }).select("user userName id").lean(),
+    ReferralBonusTracking.find({
+      userId: referrerObjectId,
+      referredUserId: { $in: referredIds },
+    })
+      .select("referredUserId turnoverCompleted turnoverRequired rewardPaid")
+      .lean(),
   ]);
 
   const usernameByUserId = new Map<string, string>();
@@ -126,13 +148,28 @@ export const getMyReferredUsers = async (userId: string): Promise<ReferredUserRo
     balances.map((b) => [String(b.userId), Number(b.totalDeposit ?? 0)])
   );
 
+  const turnoverByReferredId = new Map(
+    turnoverTrackers.map((t) => [
+      String(t.referredUserId),
+      {
+        turnoverCompleted: Number(t.turnoverCompleted ?? 0),
+        turnoverRequired: Number(t.turnoverRequired ?? REFERRED_TURNOVER_THRESHOLD),
+        rewardPaid: Boolean(t.rewardPaid),
+      },
+    ])
+  );
+
   return referrals.map((r) => {
     const referredUserId = String(r.referredUser);
+    const turnover = turnoverByReferredId.get(referredUserId);
     return {
       userId: referredUserId,
       username: usernameByUserId.get(referredUserId) ?? "—",
       totalDeposit: depositByUserId.get(referredUserId) ?? 0,
       referredAt: (r.referredAt ?? new Date()).toISOString(),
+      turnoverCompleted: turnover?.turnoverCompleted ?? 0,
+      turnoverRequired: turnover?.turnoverRequired ?? REFERRED_TURNOVER_THRESHOLD,
+      rewardPaid: turnover?.rewardPaid ?? false,
     };
   });
 };
@@ -154,7 +191,7 @@ export const getMyReferralSummary = async (userId: string): Promise<MyReferralSu
           _id: null,
           turnoverCompleted: { $sum: "$turnoverCompleted" },
           earnedBonus: {
-            $sum: { $cond: ["$isCompleted", "$bonusAmount", 0] },
+            $sum: { $cond: ["$rewardPaid", "$bonusAmount", 0] },
           },
         },
       },

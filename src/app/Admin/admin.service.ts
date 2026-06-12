@@ -210,28 +210,7 @@ const getUserPromotionSummary = async (userId: string) => {
     });
   }
 
-  for (const bonus of referralBonuses) {
-    const required = Number(bonus.turnoverRequired || 0);
-    let completed = Number(bonus.turnoverCompleted || 0);
-
-    if (!bonus.isCompleted && required > 0 && completed >= required) {
-      await ReferralBonusTracking.updateOne(
-        { _id: bonus._id },
-        { $set: { isCompleted: true, turnoverCompleted: required } }
-      );
-      bonus.isCompleted = true;
-      completed = required;
-    }
-
-    addPendingProgress({
-      id: String(bonus._id),
-      kind: 'referral',
-      label: 'Referral bonus',
-      turnoverRequired: required,
-      turnoverCompleted: completed,
-      isCompleted: Boolean(bonus.isCompleted),
-    });
-  }
+  // Referral turnover rewards are credited via LoginBonusTracking after referred user hits milestone.
 
   for (const bonus of loginBonuses) {
     const required = Number(bonus.turnoverRequired || 0);

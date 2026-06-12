@@ -9,14 +9,12 @@ import { UserOffer } from '../UserOffer/userOffer.model';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { releaseReferralBonuses } from '../ReferralRewardTracker/rewardRelease.util';
 import { NormalUser } from '../NormalUser/normalUser.model';
 import { User } from '../User/user.model';
 import { determineUserLevel } from './userLevel.util';
 import { PromotionService } from '../UserPromotion/userPromotion.service';
 import { TurnoverTracking } from '../UserPromotion/turnoverTracking.model';
 import { SignupBonusTracking } from '../User/signupBonusTracking.model';
-import { ReferralBonusTracking } from '../ReferralRewardTracker/referralBonusTracking.model';
 import { LoginBonusTracking } from '../User/loginBonusTracking.model';
 import { ReferralRewardModel } from '../ReferralRewardTracker/referralReward.model';
 import { ReferralModel } from '../Referral/referral.model';
@@ -81,26 +79,7 @@ const validateUserWithdrawal = async (userId: string, amount: number) => {
     }
   }
 
-  // ✅ 3. Referral Bonus Turnover
-  const referralBonus = await ReferralBonusTracking.findOne({
-    userId,
-    isCompleted: false,
-  });
-
-  if (referralBonus && typeof referralBonus.turnoverRequired === 'number') {
-    const remaining = Math.max(
-      0,
-      referralBonus.turnoverRequired - referralBonus.turnoverCompleted
-    );
-    if (remaining > 0) {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        `Withdrawal blocked: You must complete referral bonus turnover of ${remaining} TK.`
-      );
-    }
-  }
-
-  // ✅ 4. Login Bonus Turnover
+  // ✅ 3. Login Bonus Turnover (includes referral rewards credited to balance)
   const loginBonus = await LoginBonusTracking.findOne({
     userId,
     isCompleted: false,
@@ -795,10 +774,6 @@ export const markDepositSuccess = async (
     usageType: effectiveUsageType,
     isActive: true,
   });
-
-  if (isFirstDeposit) {
-    await releaseReferralBonuses(trx.userId.toString());
-  }
 
   const totalDeposit = updatedBalance?.totalDeposit || 0;
   const newLevel = determineUserLevel(totalDeposit);
