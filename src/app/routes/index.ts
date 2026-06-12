@@ -24,6 +24,8 @@ import { NoDepositBalanceRoutes } from '../NoDepositBalance/noDepositBalance.rou
 import { MyFavouriteCustomerRoutes } from '../MyFavouriteCustomers/myFavouriteCustomer.routes';
 import { PromotionRoutes } from '../Promotion/promotion.route';
 import ReferralRoutes from '../Referral/referral.routes';
+import { MemberBonusRewardRoutes } from '../MemberBonusReward/memberBonusReward.route';
+import { SignInRewardRoutes } from '../SignInReward/signInReward.route';
 import { KycRoutes } from '../Kyc/kyc.route';
 
 const router = Router();
@@ -54,6 +56,8 @@ const moduleRoutes = [
   { path: '/my-favourite-customers', route: MyFavouriteCustomerRoutes },
   { path: '/promotions', route: PromotionRoutes },
   { path: '/referral', route: ReferralRoutes },
+  { path: '/sign-in-reward', route: SignInRewardRoutes },
+  { path: '/member-bonus-reward', route: MemberBonusRewardRoutes },
   { path: '/kyc', route: KycRoutes },
 ];
 

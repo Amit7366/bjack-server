@@ -3,6 +3,8 @@ import { ReferralModel } from "../Referral/referral.model";
 import { ReferralRewardModel } from "../ReferralRewardTracker/referralReward.model";
 import { ReferralBonusTracking } from "../ReferralRewardTracker/referralBonusTracking.model";
 import { NormalUser } from "../NormalUser/normalUser.model";
+import { User } from "../User/user.model";
+import { UserBalance } from "../Transaction/userBalance.model";
 import AppError from "../errors/AppError";
 import httpStatus from "http-status";
 
@@ -70,6 +72,13 @@ export const trackReferral = async (
   }
 };
 
+export type ReferredUserRow = {
+  userId: string;
+  username: string;
+  totalDeposit: number;
+  referredAt: string;
+};
+
 export type MyReferralSummary = {
   referralId: string;
   activeDownline: number;
@@ -78,6 +87,54 @@ export type MyReferralSummary = {
   downlineTurnover: number;
   rewards: number;
   earnedReward: number;
+  referredUsers: ReferredUserRow[];
+};
+
+export const getMyReferredUsers = async (userId: string): Promise<ReferredUserRow[]> => {
+  if (!Types.ObjectId.isValid(userId)) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid user id");
+  }
+
+  const referrerObjectId = new Types.ObjectId(userId);
+
+  const referrals = await ReferralModel.find({ referrer: referrerObjectId })
+    .sort({ referredAt: -1 })
+    .lean();
+
+  if (!referrals.length) return [];
+
+  const referredIds = referrals.map((r) => r.referredUser);
+
+  const [users, balances, normalUsers] = await Promise.all([
+    User.find({ _id: { $in: referredIds } }).select("userName id").lean(),
+    UserBalance.find({ userId: { $in: referredIds } }).select("userId totalDeposit").lean(),
+    NormalUser.find({ user: { $in: referredIds } }).select("user userName id").lean(),
+  ]);
+
+  const usernameByUserId = new Map<string, string>();
+  for (const u of users) {
+    usernameByUserId.set(String(u._id), u.userName ?? u.id ?? "—");
+  }
+  for (const nu of normalUsers) {
+    const key = String(nu.user);
+    if (!usernameByUserId.has(key) || usernameByUserId.get(key) === "—") {
+      usernameByUserId.set(key, nu.userName ?? nu.id ?? "—");
+    }
+  }
+
+  const depositByUserId = new Map(
+    balances.map((b) => [String(b.userId), Number(b.totalDeposit ?? 0)])
+  );
+
+  return referrals.map((r) => {
+    const referredUserId = String(r.referredUser);
+    return {
+      userId: referredUserId,
+      username: usernameByUserId.get(referredUserId) ?? "—",
+      totalDeposit: depositByUserId.get(referredUserId) ?? 0,
+      referredAt: (r.referredAt ?? new Date()).toISOString(),
+    };
+  });
 };
 
 export const getMyReferralSummary = async (userId: string): Promise<MyReferralSummary> => {
@@ -87,7 +144,7 @@ export const getMyReferralSummary = async (userId: string): Promise<MyReferralSu
 
   const userObjectId = new Types.ObjectId(userId);
 
-  const [normalUser, reward, bonusAgg] = await Promise.all([
+  const [normalUser, reward, bonusAgg, referredUsers] = await Promise.all([
     NormalUser.findOne({ user: userObjectId }).select("referralId refferCount").lean(),
     ReferralRewardModel.findOne({ referrer: userObjectId }).lean(),
     ReferralBonusTracking.aggregate<{ turnoverCompleted: number; earnedBonus: number }>([
@@ -102,6 +159,7 @@ export const getMyReferralSummary = async (userId: string): Promise<MyReferralSu
         },
       },
     ]),
+    getMyReferredUsers(userId),
   ]);
 
   if (!normalUser?.referralId) {
@@ -120,5 +178,6 @@ export const getMyReferralSummary = async (userId: string): Promise<MyReferralSu
     downlineTurnover: bonus?.turnoverCompleted ?? 0,
     rewards: pendingRewards,
     earnedReward: bonus?.earnedBonus ?? 0,
+    referredUsers,
   };
 };
