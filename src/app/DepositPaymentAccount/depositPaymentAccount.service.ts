@@ -108,6 +108,22 @@ const activateAccountIntoDB = async (id: string) => {
   return account;
 };
 
+const pauseAccountIntoDB = async (id: string) => {
+  const account = await DepositPaymentAccount.findById(id);
+  if (!account) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Payment account not found');
+  }
+
+  if (!account.isActive) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'This account is not live');
+  }
+
+  account.isActive = false;
+  await account.save();
+
+  return account;
+};
+
 const deleteAccountFromDB = async (id: string) => {
   const deleted = await DepositPaymentAccount.findByIdAndDelete(id);
   if (!deleted) {
@@ -131,6 +147,7 @@ export const DepositPaymentAccountServices = {
   createAccountIntoDB,
   updateAccountIntoDB,
   activateAccountIntoDB,
+  pauseAccountIntoDB,
   deleteAccountFromDB,
   resolveActiveAccountForMethod,
 };

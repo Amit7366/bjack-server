@@ -38,6 +38,12 @@ router.patch(
 );
 
 router.patch(
+  '/:id/pause',
+  auth(USER_ROLE.superAdmin),
+  DepositPaymentAccountControllers.pauseAccount,
+);
+
+router.patch(
   '/:id',
   auth(USER_ROLE.superAdmin),
   validateRequest(updateDepositPaymentAccountSchema),

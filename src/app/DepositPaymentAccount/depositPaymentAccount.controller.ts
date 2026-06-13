@@ -69,6 +69,17 @@ const activateAccount = catchAsync(async (req, res) => {
   });
 });
 
+const pauseAccount = catchAsync(async (req, res) => {
+  const result = await DepositPaymentAccountServices.pauseAccountIntoDB(req.params.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Deposit payment account paused successfully',
+    data: result,
+  });
+});
+
 const deleteAccount = catchAsync(async (req, res) => {
   const result = await DepositPaymentAccountServices.deleteAccountFromDB(req.params.id);
 
@@ -87,5 +98,6 @@ export const DepositPaymentAccountControllers = {
   createAccount,
   updateAccount,
   activateAccount,
+  pauseAccount,
   deleteAccount,
 };
