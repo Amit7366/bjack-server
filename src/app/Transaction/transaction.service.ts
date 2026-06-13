@@ -830,8 +830,29 @@ const getUserBalance = async (memberOrUserId: string) => {
   return balance;
 };
 
-const getAllTransactions = async (filter: any) => {
-  const result = await Transaction.find(filter).populate('userId').sort({ createdAt: -1 });
+const getAllTransactions = async (query: Record<string, unknown>) => {
+  const filter: Record<string, unknown> = {};
+
+  if (typeof query.status === 'string' && query.status) {
+    filter.status = query.status;
+  }
+
+  const transactionType =
+    (typeof query.transactionType === 'string' && query.transactionType) ||
+    (typeof query.type === 'string' && query.type);
+  if (transactionType) {
+    filter.transactionType = transactionType;
+  }
+
+  if (typeof query.paymentMethod === 'string' && query.paymentMethod) {
+    filter.paymentMethod = query.paymentMethod;
+  }
+
+  const result = await Transaction.find(filter)
+    .populate('userId', 'userName id contactNo')
+    .sort({ createdAt: -1 })
+    .lean();
+
   return result;
 };
 

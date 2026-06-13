@@ -28,6 +28,7 @@ import { MemberBonusRewardRoutes } from '../MemberBonusReward/memberBonusReward.
 import { SignInRewardRoutes } from '../SignInReward/signInReward.route';
 import { GameEligibilityRoutes } from '../GameEligibility/gameEligibility.route';
 import { KycRoutes } from '../Kyc/kyc.route';
+import { DepositPaymentAccountRoutes } from '../DepositPaymentAccount/depositPaymentAccount.route';
 
 const router = Router();
 
@@ -61,6 +62,7 @@ const moduleRoutes = [
   { path: '/member-bonus-reward', route: MemberBonusRewardRoutes },
   { path: '/games/eligibility', route: GameEligibilityRoutes },
   { path: '/kyc', route: KycRoutes },
+  { path: '/deposit-payment-accounts', route: DepositPaymentAccountRoutes },
 ];
 
 moduleRoutes.forEach((r) => router.use(r.path, r.route));

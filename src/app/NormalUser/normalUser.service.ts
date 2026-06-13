@@ -14,7 +14,7 @@ export const getAllNormalUsersFromDB = async (query: Record<string, unknown>) =>
   const qb = new QueryBuilder(
     NormalUser.find({ isDeleted: false })
       .select(
-        '_id id user designation name userPlainPassword country device gender dateOfBirth email contactNo emergencyContactNo bloodGroup presentAddress permanentAddress profileImg signupBonusGiven engagementStatus kycVerified isDeleted createdAt'
+        '_id id user designation name userName country device gender dateOfBirth email contactNo emergencyContactNo bloodGroup presentAddress permanentAddress profileImg signupBonusGiven engagementStatus kycVerified kycStatus status userLevel referralId referredBy lastActiveAt createdAt',
       )
       .sort({ createdAt: -1, _id: -1 }) // newest first
       .lean(),
@@ -73,16 +73,12 @@ const getSingleNormalUserFromDB = async (userId: string) => {
   }
 
   const userBalance = await UserBalance.findOne({ userId: new Types.ObjectId(userId) });
-  if (!userBalance) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User balance not found');
-  }
 
   const userPromotion = await UserPromotion.findOne({ userId: new Types.ObjectId(userId) });
-  console.log(userPromotion)
 
   return {
     ...normalUser.toObject(),
-    balanceSheet: userBalance.toObject(),
+    balanceSheet: userBalance ? userBalance.toObject() : {},
     promotion: userPromotion ? userPromotion.toObject() : null,
   };
 };

@@ -155,6 +155,43 @@ const getSuccessfulTransactionRecord = catchAsync(async (req, res) => {
     data: result,
   });
 });
+
+const getDashboardOverview = catchAsync(async (req, res) => {
+  const { from, to } = req.query;
+  const result = await AdminServices.getDashboardOverviewFromDB(
+    from as string | undefined,
+    to as string | undefined,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Dashboard overview fetched successfully',
+    data: result,
+  });
+});
+
+const getAdvertiserDashboardOverview = catchAsync(async (req, res) => {
+  const userId = String(req.user?.objectId ?? '').trim();
+  if (!userId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'User id is required');
+  }
+
+  const { from, to } = req.query;
+  const result = await AdminServices.getAdvertiserDashboardOverviewFromDB(
+    userId,
+    from as string | undefined,
+    to as string | undefined,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Advertiser dashboard overview fetched successfully',
+    data: result,
+  });
+});
+
 const getUsersWithHighBalance = catchAsync(async (req, res) => {
   const result = await AdminServices.getUsersWithHighBalanceFromDB();
 
@@ -177,4 +214,6 @@ export const AdminControllers = {
   getMyUsers,
   getSuccessfulTransactionRecord,
   getUsersWithHighBalance,
+  getDashboardOverview,
+  getAdvertiserDashboardOverview,
 };

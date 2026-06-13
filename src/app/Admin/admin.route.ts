@@ -16,9 +16,39 @@ router.get(
 );
 
 router.get(
+  '/dashboard/overview',
+  auth(USER_ROLE.superAdmin, USER_ROLE.admin),
+  AdminControllers.getDashboardOverview,
+);
+
+router.get(
+  '/dashboard/advertiser-overview',
+  auth(USER_ROLE.advertiser),
+  AdminControllers.getAdvertiserDashboardOverview,
+);
+
+router.get(
   '/promotion-summary/:userId',
   auth(USER_ROLE.superAdmin, USER_ROLE.admin, USER_ROLE.user),
   AdminControllers.getUserPromotionSummary
+);
+
+router.get(
+  '/customerOfficers/my-users',
+  auth(USER_ROLE.admin, USER_ROLE.superAdmin),
+  AdminControllers.getMyUsers
+);
+
+router.get(
+  '/user/successful-transaction/record/allusers',
+  auth(USER_ROLE.admin, USER_ROLE.superAdmin),
+  AdminControllers.getSuccessfulTransactionRecord
+);
+
+router.get(
+  '/users/high-balance/allusers',
+  auth(USER_ROLE.admin, USER_ROLE.superAdmin),
+  AdminControllers.getUsersWithHighBalance
 );
 
 router.get(
@@ -56,22 +86,6 @@ router.post(
   auth(USER_ROLE.admin, USER_ROLE.superAdmin),
   validateRequest(assignCustomerOfficerValidation),
   AdminControllers.assignCustomerOfficer
-);
-
-router.get(
-  '/customerOfficers/my-users',
-  auth(USER_ROLE.admin, USER_ROLE.superAdmin),
-  AdminControllers.getMyUsers
-);
-router.get(
-  '/user/successful-transaction/record/allusers',
-  auth(USER_ROLE.admin, USER_ROLE.superAdmin),
-  AdminControllers.getSuccessfulTransactionRecord
-);
-router.get(
-  '/users/high-balance/allusers',
-  auth(USER_ROLE.admin, USER_ROLE.superAdmin),
-  AdminControllers.getUsersWithHighBalance
 );
 
 

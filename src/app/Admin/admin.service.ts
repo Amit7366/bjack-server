@@ -22,6 +22,10 @@ interface ITransactionFilter {
 
 import { GameTxnRecord } from '../GameTxnRecords/models/GameTxnRecord';
 import { Transaction } from '../Transaction/transaction.model';
+import { TurnoverActivity } from '../Turnover/turnover.model';
+import { BetTransaction } from '../Transaction/betTransaction.model';
+import { getMyReferralSummary } from '../Referral/referral.service';
+import { ReferralModel } from '../Referral/referral.model';
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Admin list/search
@@ -432,7 +436,451 @@ const getSuccessfulTransactionRecordFromDB = async (filters: ITransactionFilter)
   ]);
 
   return result;
+};
+
+// ───────────────────────────────────────────────────────────────────────────────
+// Dashboard overview
+// ───────────────────────────────────────────────────────────────────────────────
+function parseDashboardDateRange(from?: string, to?: string) {
+  const toDate = to ? new Date(`${to}T23:59:59.999Z`) : new Date();
+  toDate.setUTCHours(23, 59, 59, 999);
+
+  const fromDate = from ? new Date(`${from}T00:00:00.000Z`) : new Date(toDate);
+  if (!from) {
+    fromDate.setDate(fromDate.getDate() - 6);
+  }
+  fromDate.setUTCHours(0, 0, 0, 0);
+
+  const ms = toDate.getTime() - fromDate.getTime() + 1;
+  const prevToDate = new Date(fromDate.getTime() - 1);
+  const prevFromDate = new Date(prevToDate.getTime() - ms + 1);
+  prevFromDate.setUTCHours(0, 0, 0, 0);
+  prevToDate.setUTCHours(23, 59, 59, 999);
+
+  return { fromDate, toDate, prevFromDate, prevToDate };
 }
+
+async function sumPendingTransactions(transactionType: 'deposit' | 'withdraw') {
+  const [agg] = await Transaction.aggregate([
+    { $match: { status: 'pending', transactionType } },
+    {
+      $group: {
+        _id: null,
+        count: { $sum: 1 },
+        totalAmount: { $sum: '$amount' },
+      },
+    },
+  ]);
+  return { count: agg?.count ?? 0, totalAmount: agg?.totalAmount ?? 0 };
+}
+
+async function paymentStats(fromDate: Date, toDate: Date) {
+  const agg = await Transaction.aggregate([
+    {
+      $match: {
+        status: 'success',
+        createdAt: { $gte: fromDate, $lte: toDate },
+      },
+    },
+    {
+      $group: {
+        _id: '$transactionType',
+        count: { $sum: 1 },
+        amount: { $sum: '$amount' },
+        bonusPaid: { $sum: { $ifNull: ['$bonusAmount', 0] } },
+      },
+    },
+  ]);
+
+  const deposits = { count: 0, amount: 0 };
+  const withdrawals = { count: 0, amount: 0 };
+  let bonusPaid = 0;
+
+  for (const row of agg ?? []) {
+    if (row._id === 'deposit') {
+      deposits.count = row.count;
+      deposits.amount = row.amount;
+      bonusPaid = row.bonusPaid ?? 0;
+    } else if (row._id === 'withdraw') {
+      withdrawals.count = row.count;
+      withdrawals.amount = row.amount;
+    }
+  }
+
+  const byMethodAgg = await Transaction.aggregate([
+    {
+      $match: {
+        status: 'success',
+        transactionType: 'deposit',
+        createdAt: { $gte: fromDate, $lte: toDate },
+      },
+    },
+    {
+      $group: {
+        _id: '$paymentMethod',
+        amount: { $sum: '$amount' },
+      },
+    },
+  ]);
+
+  const byMethod: Record<string, number> = {};
+  for (const row of byMethodAgg) {
+    byMethod[String(row._id ?? 'unknown')] = row.amount ?? 0;
+  }
+
+  return { deposits, withdrawals, bonusPaid, byMethod };
+}
+
+async function gamingStats(fromDate: Date, toDate: Date) {
+  const [gameAgg, betAgg] = await Promise.all([
+    GameTxnRecord.aggregate([
+      { $match: { providerTsUtc: { $gte: fromDate, $lte: toDate } } },
+      {
+        $group: {
+          _id: null,
+          turnover: { $sum: '$bet' },
+          wins: { $sum: '$win' },
+          activeBettors: { $addToSet: '$userId' },
+        },
+      },
+      {
+        $project: {
+          turnover: 1,
+          wins: 1,
+          activeBettors: { $size: '$activeBettors' },
+          ggr: { $subtract: ['$turnover', '$wins'] },
+        },
+      },
+    ]),
+    BetTransaction.aggregate([
+      { $match: { createdAt: { $gte: fromDate, $lte: toDate } } },
+      {
+        $group: {
+          _id: null,
+          winCount: { $sum: { $cond: [{ $eq: ['$type', 'win'] }, 1, 0] } },
+          loseCount: { $sum: { $cond: [{ $eq: ['$type', 'lose'] }, 1, 0] } },
+          refundCount: { $sum: { $cond: [{ $eq: ['$type', 'refund'] }, 1, 0] } },
+        },
+      },
+    ]),
+  ]);
+
+  const game = gameAgg[0] ?? { turnover: 0, wins: 0, ggr: 0, activeBettors: 0 };
+  const bets = betAgg[0] ?? { winCount: 0, loseCount: 0, refundCount: 0 };
+
+  const byGameType = await TurnoverActivity.aggregate([
+    { $match: { timestamp: { $gte: fromDate, $lte: toDate } } },
+    {
+      $group: {
+        _id: '$gameType',
+        amount: { $sum: '$amount' },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { amount: -1 } },
+  ]);
+
+  return {
+    turnover: game.turnover ?? 0,
+    wins: game.wins ?? 0,
+    ggr: game.ggr ?? 0,
+    activeBettors: game.activeBettors ?? 0,
+    winCount: bets.winCount ?? 0,
+    loseCount: bets.loseCount ?? 0,
+    refundCount: bets.refundCount ?? 0,
+    byGameType: byGameType.map((row) => ({
+      gameType: String(row._id ?? 'other'),
+      amount: row.amount ?? 0,
+      count: row.count ?? 0,
+    })),
+  };
+}
+
+async function trendStats(fromDate: Date, toDate: Date) {
+  const [registrationsByDay, depositsByDay, withdrawalsByDay, ggrByDay] =
+    await Promise.all([
+      User.aggregate([
+        {
+          $match: {
+            role: 'user',
+            isDeleted: false,
+            createdAt: { $gte: fromDate, $lte: toDate },
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Transaction.aggregate([
+        {
+          $match: {
+            status: 'success',
+            transactionType: 'deposit',
+            createdAt: { $gte: fromDate, $lte: toDate },
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            amount: { $sum: '$amount' },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Transaction.aggregate([
+        {
+          $match: {
+            status: 'success',
+            transactionType: 'withdraw',
+            createdAt: { $gte: fromDate, $lte: toDate },
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            amount: { $sum: '$amount' },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      GameTxnRecord.aggregate([
+        { $match: { providerTsUtc: { $gte: fromDate, $lte: toDate } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$providerTsUtc' } },
+            bet: { $sum: '$bet' },
+            win: { $sum: '$win' },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            amount: { $subtract: ['$bet', '$win'] },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+  return {
+    registrationsByDay: registrationsByDay.map((r) => ({
+      date: r._id,
+      count: r.count,
+    })),
+    depositsByDay: depositsByDay.map((r) => ({ date: r._id, amount: r.amount })),
+    withdrawalsByDay: withdrawalsByDay.map((r) => ({
+      date: r._id,
+      amount: r.amount,
+    })),
+    ggrByDay: ggrByDay.map((r) => ({ date: r._id, amount: r.amount })),
+  };
+}
+
+const getDashboardOverviewFromDB = async (from?: string, to?: string) => {
+  const { fromDate, toDate, prevFromDate, prevToDate } = parseDashboardDateRange(from, to);
+
+  const [
+    pendingDeposits,
+    pendingWithdrawals,
+    pendingKyc,
+    frozenAccounts,
+    negativeBalanceUsers,
+    totalUsers,
+    newInPeriod,
+    newPreviousPeriod,
+    activeInPeriod,
+    statusAgg,
+    levelAgg,
+    payments,
+    paymentsPrevious,
+    gaming,
+    walletAgg,
+    trends,
+    pendingTxRows,
+    newUserRows,
+  ] = await Promise.all([
+    sumPendingTransactions('deposit'),
+    sumPendingTransactions('withdraw'),
+    User.countDocuments({ kycStatus: 'pending', isDeleted: false }),
+    User.countDocuments({ status: 'frozen', role: 'user', isDeleted: false }),
+    UserBalance.countDocuments({ currentBalance: { $lt: 0 } }),
+    User.countDocuments({ role: 'user', isDeleted: false }),
+    User.countDocuments({
+      role: 'user',
+      isDeleted: false,
+      createdAt: { $gte: fromDate, $lte: toDate },
+    }),
+    User.countDocuments({
+      role: 'user',
+      isDeleted: false,
+      createdAt: { $gte: prevFromDate, $lte: prevToDate },
+    }),
+    User.countDocuments({
+      role: 'user',
+      isDeleted: false,
+      lastActiveAt: { $gte: fromDate, $lte: toDate },
+    }),
+    User.aggregate([
+      { $match: { role: 'user', isDeleted: false } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]),
+    User.aggregate([
+      { $match: { role: 'user', isDeleted: false } },
+      { $group: { _id: '$userLevel', count: { $sum: 1 } } },
+    ]),
+    paymentStats(fromDate, toDate),
+    paymentStats(prevFromDate, prevToDate),
+    gamingStats(fromDate, toDate),
+    UserBalance.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalBalance: { $sum: '$currentBalance' },
+          lockedBalance: { $sum: { $ifNull: ['$lockedBalance', 0] } },
+        },
+      },
+    ]),
+    trendStats(fromDate, toDate),
+    Transaction.find({ status: 'pending' })
+      .populate('userId', 'userName id')
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean(),
+    NormalUser.find({ isDeleted: false })
+      .select('id userName createdAt kycVerified status')
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean(),
+  ]);
+
+  const byStatus: Record<string, number> = {};
+  for (const row of statusAgg) {
+    byStatus[String(row._id ?? 'unknown')] = row.count;
+  }
+
+  const byLevel: Record<string, number> = {};
+  for (const row of levelAgg) {
+    byLevel[String(row._id ?? 'Normal')] = row.count;
+  }
+
+  const wallet = walletAgg[0] ?? { totalBalance: 0, lockedBalance: 0 };
+
+  return {
+    period: {
+      from: fromDate.toISOString().slice(0, 10),
+      to: toDate.toISOString().slice(0, 10),
+    },
+    previousPeriod: {
+      from: prevFromDate.toISOString().slice(0, 10),
+      to: prevToDate.toISOString().slice(0, 10),
+    },
+    actionRequired: {
+      pendingDeposits,
+      pendingWithdrawals,
+      pendingKyc: { count: pendingKyc },
+      frozenAccounts: { count: frozenAccounts },
+      negativeBalanceUsers: { count: negativeBalanceUsers },
+    },
+    users: {
+      total: totalUsers,
+      newInPeriod,
+      newPreviousPeriod,
+      activeInPeriod,
+      byStatus,
+      byLevel,
+    },
+    payments: {
+      deposits: payments.deposits,
+      depositsPrevious: paymentsPrevious.deposits,
+      withdrawals: payments.withdrawals,
+      withdrawalsPrevious: paymentsPrevious.withdrawals,
+      netPosition: payments.deposits.amount - payments.withdrawals.amount,
+      bonusPaid: payments.bonusPaid,
+      byMethod: payments.byMethod,
+    },
+    gaming,
+    wallet: {
+      totalBalance: wallet.totalBalance ?? 0,
+      lockedBalance: wallet.lockedBalance ?? 0,
+    },
+    trends,
+    recent: {
+      pendingTransactions: pendingTxRows.map((row: any) => ({
+        _id: String(row._id),
+        id: row.id,
+        amount: row.amount,
+        transactionType: row.transactionType,
+        paymentMethod: row.paymentMethod,
+        status: row.status,
+        createdAt: row.createdAt,
+        userName: row.userId?.userName,
+        memberId: row.userId?.id ?? row.id,
+      })),
+      newUsers: newUserRows.map((row: any) => ({
+        memberId: row.id,
+        userName: row.userName,
+        createdAt: row.createdAt,
+        kycStatus: row.kycVerified ? 'approved' : 'pending',
+        status: row.status,
+      })),
+    },
+  };
+};
+
+const getAdvertiserDashboardOverviewFromDB = async (
+  userId: string,
+  from?: string,
+  to?: string,
+) => {
+  const { fromDate, toDate } = parseDashboardDateRange(from, to);
+  const summary = await getMyReferralSummary(userId);
+  const referrerObjectId = new Types.ObjectId(userId);
+
+  const [newInPeriod, referredIds] = await Promise.all([
+    ReferralModel.countDocuments({
+      referrer: referrerObjectId,
+      referredAt: { $gte: fromDate, $lte: toDate },
+    }),
+    ReferralModel.find({ referrer: referrerObjectId }).select('referredUser').lean(),
+  ]);
+
+  const ids = referredIds.map((r) => r.referredUser);
+  let activeReferred = 0;
+  let ftdCount = 0;
+
+  if (ids.length) {
+    [activeReferred, ftdCount] = await Promise.all([
+      User.countDocuments({
+        _id: { $in: ids },
+        lastActiveAt: { $gte: fromDate, $lte: toDate },
+      }),
+      UserBalance.countDocuments({
+        userId: { $in: ids },
+        totalDeposit: { $gt: 0 },
+      }),
+    ]);
+  }
+
+  return {
+    period: {
+      from: fromDate.toISOString().slice(0, 10),
+      to: toDate.toISOString().slice(0, 10),
+    },
+    referralId: summary.referralId,
+    inviteCount: summary.inviteCount,
+    newInPeriod,
+    activeReferred,
+    ftdCount,
+    earnedReward: summary.earnedReward,
+    pendingRewards: summary.totalRewards,
+    downlineTurnover: summary.downlineTurnover,
+    referredUsers: summary.referredUsers.slice(0, 10),
+  };
+};
 
 const getUsersWithHighBalanceFromDB = async () => {
   const result = await UserBalance.aggregate([
@@ -474,5 +922,7 @@ export const AdminServices = {
   assignCustomerOfficer,
   getUsersAssignedToOfficer,
   getSuccessfulTransactionRecordFromDB,
-  getUsersWithHighBalanceFromDB
+  getUsersWithHighBalanceFromDB,
+  getDashboardOverviewFromDB,
+  getAdvertiserDashboardOverviewFromDB,
 };
