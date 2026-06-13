@@ -89,6 +89,8 @@ const allowedOrigins = [
   'https://mns-client.vercel.app',
   'https://bkbaji.com',
   'https://www.bkbaji.com',
+  'https://www.bkbaji.com',
+  'https://admin.bkbaji.com',
   ...corsFromEnv,
 ];
 const corsOptions = {
