@@ -5,7 +5,13 @@
     "src/teleSalesLeads/teleSalesLeads.data.ts",
     "src/teleSalesLeads/seedTeleSalesLeads.ts",
     "src/data/gameData.ts",
-    "src/scripts/seedGameCatalog.ts"
+    "src/data/exclusiveGamesData.ts",
+    "src/data/vendorGamesData.ts",
+    "src/scripts/seedGameCatalog.ts",
+    "src/scripts/seedExclusiveGames.ts",
+    "src/scripts/seedVendorGames.ts",
+    "src/scripts/seedHomeGames.ts",
+    "src/scripts/seedGameTypes.ts"
   ],
   "compilerOptions": {
     "target": "es2016",
