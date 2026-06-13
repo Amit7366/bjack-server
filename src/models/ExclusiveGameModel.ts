@@ -2,7 +2,7 @@ import { Schema, model } from 'mongoose';
 
 const exclusiveGameSchema = new Schema(
   {
-    image: { type: String, required: true },
+    image: { type: String, default: '' },
     gameId: { type: String },
     gameCode: { type: String },
     title: { type: String },

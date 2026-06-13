@@ -11,7 +11,7 @@ const gameSchema = new Schema(
     gradient: { type: String, default: '' },
     glow: { type: String, default: '' },
     emoji: { type: String },
-    image: { type: String, required: true },
+    image: { type: String, default: '' },
     types: [{ type: String }],
     vendorCode: { type: String, index: true },
     sortOrder: { type: Number, default: 0 },

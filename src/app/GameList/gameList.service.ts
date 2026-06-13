@@ -26,6 +26,10 @@ export const createGame = async (data: Record<string, unknown>) => {
   return await GameCatalogModel.create(data);
 };
 
+export const getAllCatalogGamesForAdmin = async () => {
+  return GameCatalogModel.find().sort({ sortOrder: 1, createdAt: -1 }).lean();
+};
+
 export const getGameById = async (id: string) => {
   return await GameCatalogModel.findById(id);
 };
@@ -69,8 +73,9 @@ export const getVendorGames = async (vendorCodes: string[]) => {
 
   for (const doc of games) {
     const tile = toGameTile(doc as Record<string, unknown>);
-    if (seen.has(tile.id)) continue;
-    seen.add(tile.id);
+    const dedupeKey = tile.gameCode?.trim() || tile.id;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
     data.push(tile);
   }
 

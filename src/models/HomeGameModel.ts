@@ -11,7 +11,7 @@ const homeGameSchema = new Schema(
     gradient: { type: String, required: true },
     glow: { type: String, required: true },
     emoji: { type: String },
-    image: { type: String, required: true },
+    image: { type: String, default: '' },
     sortOrder: { type: Number, default: 0 },
   },
   { timestamps: true },

@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { vendorGames } from '../data/vendorGamesData';
 import { GameCatalogModel } from '../models/GameCatalogModel';
 import { connectSeedDb } from './seedUtils';
-import { inferGameTypeFromTitle, normalizeTurnoverGameType } from '../app/GameEligibility/gameType.util';
+import { inferGameTypeFromTitle } from '../app/GameEligibility/gameType.util';
 
 dotenv.config();
 
@@ -24,9 +24,7 @@ const seedVendorGames = async () => {
     let updatedCount = 0;
 
     for (const game of vendorGames) {
-      const gameType = normalizeTurnoverGameType(
-        game.types?.[0] ?? inferGameTypeFromTitle(game.title, game.vendorCode)
-      );
+      const gameType = game.types[0] ?? inferGameTypeFromTitle(game.title, game.vendorCode);
 
       const doc: Record<string, unknown> = {
         tileId: game.tileId,
@@ -36,17 +34,15 @@ const seedVendorGames = async () => {
         gradient: game.gradient,
         glow: game.glow,
         image: game.image,
-        types: game.types?.length ? game.types : [gameType],
+        types: game.types,
         vendorCode: game.vendorCode,
         sortOrder: game.sortOrder,
         game_name: game.title,
         game_image: game.image,
         game_type: gameType,
+        gameCode: game.gameCode,
+        provider: game.providerKey,
       };
-
-      if (game.gameCode) {
-        doc.gameCode = game.gameCode;
-      }
 
       if (game.emoji) {
         doc.emoji = game.emoji;
@@ -62,7 +58,7 @@ const seedVendorGames = async () => {
       }
     }
 
-    console.log(`✅ Seeded or updated ${updatedCount} vendor games into GameCatalog`);
+    console.log(`✅ Seeded or updated ${updatedCount} vendor games into GameCatalog (${vendorGames.length} total from gameData)`);
     process.exit(0);
   } catch (error) {
     console.error('❌ Vendor games seeding failed:', error);

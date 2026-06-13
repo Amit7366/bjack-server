@@ -71,16 +71,16 @@ export const homeGames: HomeGameSeed[] = [
   },
   {
     gameId: 'fortuneGaruda',
-    title: 'Fortune Garuda 500',
-    providerLabel: 'JILI',
+    title: 'Garuda Gems',
+    providerLabel: 'PG SOFT',
     gameCode: 'aa609892f551de2053e92427dc4ae17f',
     game_type: 'slot',
-    providerKey: 'jili',
+    providerKey: 'pg',
     gradient: 'from-[#b45309] via-[#92400e] to-[#451a03]',
     glow: '#fbbf24',
     emoji: '🦅',
     image:
-      'https://img.b112j.com/bj/h5/assets/images/exclusivegames/default/exclusive-fortune-garuda-500.png?v=1778752753270&source=drccdnsrc',
+      'https://img.b112j.com/upload/game/AWCV2_PG/BDT/PG-SLOT-094.png?v=1778344501063',
     sortOrder: 4,
   },
   {
@@ -100,10 +100,10 @@ export const homeGames: HomeGameSeed[] = [
   {
     gameId: 'bjMoneyWheel',
     title: 'bj Money Wheel',
-    providerLabel: 'JDB',
+    providerLabel: 'JILI',
     gameCode: '6e19e03c50f035ddd9ffd804c30f8c80',
     game_type: 'live',
-    providerKey: 'jdb',
+    providerKey: 'jili',
     gradient: 'from-[#eab308] via-[#ca8a04] to-[#854d0e]',
     glow: '#fde047',
     emoji: '🎡',

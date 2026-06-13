@@ -48,6 +48,16 @@ export const deleteGameHandler = async (req: Request, res: Response) => {
   });
 };
 
+export const getAllCatalogGamesHandler = async (_req: Request, res: Response) => {
+  const games = await GameService.getAllCatalogGamesForAdmin();
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Game catalog fetched successfully',
+    data: games,
+  });
+};
+
 export const getFilteredGamesHandler = async (req: Request, res: Response) => {
   const { provider, category: game_type } = req.query;
 

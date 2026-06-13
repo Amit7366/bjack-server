@@ -11,7 +11,7 @@ const seedExclusiveGames = async () => {
     let updatedCount = 0;
     for (const doc of exclusiveGames) {
       const result = await ExclusiveGameModel.updateOne(
-        { image: doc.image, sortOrder: doc.sortOrder },
+        { sortOrder: doc.sortOrder },
         { $set: doc },
         { upsert: true },
       );
@@ -19,7 +19,7 @@ const seedExclusiveGames = async () => {
         updatedCount++;
       }
     }
-    console.log(`✅ Seeded or updated ${updatedCount} exclusive carousel slides`);
+    console.log(`✅ Seeded or updated ${updatedCount} exclusive carousel slides (${exclusiveGames.length} total from gameData)`);
     process.exit(0);
   } catch (error) {
     console.error('❌ Exclusive games seeding failed:', error);
