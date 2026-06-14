@@ -35,11 +35,17 @@ export class GameTxnRecordsController {
       if (tab === 'unsettled') {
         res.status(200).json({
           success: true,
-          sbmId,
-          total: 0,
-          totalBets: 0,
-          totalWins: 0,
-          history: [],
+          statusCode: 200,
+          data: {
+            sbmId,
+            total: 0,
+            totalBets: 0,
+            totalWins: 0,
+            page: 1,
+            limit: Math.min(Number(req.query.limit) || 20, 100),
+            totalPages: 0,
+            history: [],
+          },
         });
         return;
       }
@@ -47,7 +53,7 @@ export class GameTxnRecordsController {
       const from = req.query.from?.toString();
       const to = req.query.to?.toString();
       const page = Number(req.query.page) || 1;
-      const limit = Math.min(Number(req.query.limit) || 200, 500);
+      const limit = Math.min(Number(req.query.limit) || 20, 100);
 
       const data = await this.service.getUserBets({
         sbmId: sbmId.trim().toLowerCase(),
@@ -60,7 +66,8 @@ export class GameTxnRecordsController {
 
       res.status(200).json({
         success: true,
-        ...data,
+        statusCode: 200,
+        data,
       });
     } catch (err) {
       console.error('Error in getUserBets controller:', err);

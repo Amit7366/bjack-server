@@ -22,6 +22,9 @@ export type UserGameBetsResult = {
   total: number;
   totalBets: number;
   totalWins: number;
+  page: number;
+  limit: number;
+  totalPages: number;
   history: GameTxnHistoryRow[];
 };
 
@@ -83,8 +86,20 @@ export class GameTxnRecordsService {
             {
               $lookup: {
                 from: 'gamecatalogs',
-                localField: 'gameUid',
-                foreignField: 'game_code',
+                let: { uid: '$gameUid' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $or: [
+                          { $eq: ['$gameCode', '$$uid'] },
+                          { $eq: ['$tileId', '$$uid'] },
+                        ],
+                      },
+                    },
+                  },
+                  { $limit: 1 },
+                ],
                 as: 'gameInfo',
               },
             },
@@ -105,9 +120,15 @@ export class GameTxnRecordsService {
                 providerTsUtc: 1,
                 gameUid: 1,
                 game: {
-                  name: '$gameInfo.game_name',
-                  code: '$gameInfo.game_code',
-                  provider: '$gameInfo.provider',
+                  name: {
+                    $ifNull: ['$gameInfo.game_name', '$gameInfo.title'],
+                  },
+                  code: {
+                    $ifNull: ['$gameInfo.gameCode', '$gameUid'],
+                  },
+                  provider: {
+                    $ifNull: ['$gameInfo.provider', '$gameInfo.providerLabel'],
+                  },
                   type: '$gameInfo.game_type',
                 },
               },
@@ -121,27 +142,34 @@ export class GameTxnRecordsService {
   }
 
   async getUserBets(q: GetUserBetsQuery): Promise<UserGameBetsResult> {
-    const { sbmId, userId, from, to, page = 1, limit = 200 } = q;
-    const skip = (page - 1) * limit;
+    const { sbmId, userId, from, to, page = 1, limit = 20 } = q;
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+    const skip = (safePage - 1) * safeLimit;
     const normalizedSbmId = sbmId.trim().toLowerCase();
 
     let match = this.buildMatch(normalizedSbmId, from, to);
-    let facet = await this.aggregateHistory(match, skip, limit);
+    let facet = await this.aggregateHistory(match, skip, safeLimit);
     let meta = facet?.meta?.[0];
 
     if ((meta?.total ?? 0) === 0 && userId && Types.ObjectId.isValid(userId)) {
       match = this.buildMatch(normalizedSbmId, from, to);
       delete match.sbmId;
       match.userId = new Types.ObjectId(userId);
-      facet = await this.aggregateHistory(match, skip, limit);
+      facet = await this.aggregateHistory(match, skip, safeLimit);
       meta = facet?.meta?.[0];
     }
 
+    const total = meta?.total ?? 0;
+
     return {
       sbmId: normalizedSbmId,
-      total: meta?.total ?? 0,
+      total,
       totalBets: meta?.totalBets ?? 0,
       totalWins: meta?.totalWins ?? 0,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: total > 0 ? Math.ceil(total / safeLimit) : 0,
       history: facet?.history ?? [],
     };
   }

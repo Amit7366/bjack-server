@@ -2305,25 +2305,25 @@ const jilli = {
                 "game_name": "Chin Shi Huang",
                 "game_code": "24da72b49b0dd0e5cbef9579d09d8981",
                 "game_type": "Slot Game",
-                "game_image": "https://huidu-bucket.s3.ap-southeast-1.amazonaws.com/api/jili/Chin-Shi-Huang.png"
+                "game_image": "https://img.b112j.com/upload/game/AWCV2_JILI/BDT/JILI-SLOT-003.png?v=1778346480421"
             },
             {
                 "game_name": "God Of Martial",
                 "game_code": "21ef8a7ddd39836979170a2e7584e333",
                 "game_type": "Slot Game",
-                "game_image": "https://huidu-bucket.s3.ap-southeast-1.amazonaws.com/api/jili/God-Of-Martial.png"
+                "game_image": "https://img.b112j.com/upload/game/AWCV2_JILI/BDT/JILI-SLOT-010.png?v=1778346481524"
             },
             {
                 "game_name": "Hot Chilli",
                 "game_code": "c845960c81d27d7880a636424e53964d",
                 "game_type": "Slot Game",
-                "game_image": "https://huidu-bucket.s3.ap-southeast-1.amazonaws.com/api/jili/Hot-Chilli.png"
+                "game_image": "https://img.b112j.com/upload/game/AWCV2_JILI/BDT/JILI-SLOT-002.png?v=1778346480273"
             },
             {
                 "game_name": "Fortune Tree",
                 "game_code": "6a7e156ceec5c581cd6b9251854fe504",
                 "game_type": "Slot Game",
-                "game_image": "https://huidu-bucket.s3.ap-southeast-1.amazonaws.com/api/jili/Fortune-Tree.png"
+                "game_image": "https://img.b112j.com/upload/game/AWCV2_JILI/BDT/JILI-SLOT-005.png?v=1778346480722"
             },
             {
                 "game_name": "War Of Dragons",
@@ -4681,17 +4681,17 @@ const fachai = {
     provider: "fachai",
     games: [
         { game_name: "GODS GRANT FORTUNE", game_code: "46816b28e0fbcf25d3e01c389510af70", game_type: "Fish Game", game_image: "" },
-        { game_name: "EGYPT BONANZA", game_code: "0b506916e1b001c6eb121fb834e09ada", game_type: "Slot Game", game_image: "" },
+        { game_name: "EGYPT BONANZA", game_code: "0b506916e1b001c6eb121fb834e09ada", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-035.png?v=1778347228687" },
         { game_name: "GO GO RISE", game_code: "2d1c2e84556060e33e1f4f8b419c5b3a", game_type: "Arcade Game", game_image: "" },
-        { game_name: "LEGEND OF INCA", game_code: "c7b9fdd6e1e633485c67c1db2dc57406", game_type: "Slot Game", game_image: "" },
-        { game_name: "NIGHT MARKET 2", game_code: "3e3b0ba086c839b394220152951c6d25", game_type: "Slot Game", game_image: "" },
+        { game_name: "LEGEND OF INCA", game_code: "c7b9fdd6e1e633485c67c1db2dc57406", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-034.png?v=1778347228529" },
+        { game_name: "NIGHT MARKET 2", game_code: "3e3b0ba086c839b394220152951c6d25", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-032.png?v=1778347228213" },
         { game_name: "STAR HUNTER", game_code: "9272bfd25844c3a1373614a457392084", game_type: "Fish Game", game_image: "" },
-        { game_name: "CHINESE NEW YEAR", game_code: "c7ea70b0a6c39e2235610b057e0c6621", game_type: "Slot Game", game_image: "" },
-        { game_name: "CHINESE NEW YEAR 2", game_code: "6468b1e08cc2132f3c8e7e7d4c619c53", game_type: "Slot Game", game_image: "" },
-        { game_name: "NIGHT MARKET", game_code: "9198e4319ced66e3f3dac17c8d36fad8", game_type: "Slot Game", game_image: "" },
-        { game_name: "LUCKY FORTUNES", game_code: "6940313357dd1ec127bb2203f9ae8e6c", game_type: "Slot Game", game_image: "" },
-        { game_name: "GOLDEN GENIE", game_code: "7b81c1c65363a4c9bf89d8064a41f56a", game_type: "Slot Game", game_image: "" },
-        { game_name: "SUGAR BANG BANG", game_code: "69f7770ee6c9b2eb5756652833b84092", game_type: "Slot Game", game_image: "" },
+        { game_name: "CHINESE NEW YEAR", game_code: "c7ea70b0a6c39e2235610b057e0c6621", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-043.png?v=1778347230430" },
+        { game_name: "CHINESE NEW YEAR 2", game_code: "6468b1e08cc2132f3c8e7e7d4c619c53", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-043.png?v=1778347230430" },
+        { game_name: "NIGHT MARKET", game_code: "9198e4319ced66e3f3dac17c8d36fad8", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-004.png?v=1778347223242" },
+        { game_name: "LUCKY FORTUNES", game_code: "6940313357dd1ec127bb2203f9ae8e6c", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-021.png?v=1778347226084" },
+        { game_name: "GOLDEN GENIE", game_code: "7b81c1c65363a4c9bf89d8064a41f56a", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-046.png?v=1759492919737" },
+        { game_name: "SUGAR BANG BANG", game_code: "69f7770ee6c9b2eb5756652833b84092", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-025.png?v=1778347226760" },
         { game_name: "MONKEY KING FISHING", game_code: "9900afb8cdc3016a34ef00ad563b3293", game_type: "Fish Game", game_image: "" },
         { game_name: "COWBOYS", game_code: "2ea85e851818778e2ed4317c9982e54a", game_type: "Slot Game", game_image: "" },
         { game_name: "ZEUS", game_code: "da0d973cee506257c900d18375883f2c", game_type: "Slot Game", game_image: "" },
@@ -4702,11 +4702,11 @@ const fachai = {
         { game_name: "MONEY TREE DOZER", game_code: "d031266666b559fef858205fe12bb1ef", game_type: "Arcade Game", game_image: "" },
         { game_name: "MAGIC BEANS", game_code: "b628cd862301d9bd73e70b944a2b3c11", game_type: "Slot Game", game_image: "" },
         { game_name: "MERGE MAGIC", game_code: "9735225d268562198fc5079a36e6b6fe", game_type: "Slot Game", game_image: "" },
-        { game_name: "TREASURE RAIDERS", game_code: "c56cfddb7bdbc6bbb517a643803f3121", game_type: "Slot Game", game_image: "" },
+        { game_name: "TREASURE RAIDERS", game_code: "c56cfddb7bdbc6bbb517a643803f3121", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-065.png?v=1781251907164" },
         { game_name: "BAO CHUAN FISHING", game_code: "e896288c157bc846234d254d03b083f1", game_type: "Fish Game", game_image: "" },
-        { game_name: "SUPER ELEMENTS", game_code: "756fbfeac906e1e78e49ee74fa20b367", game_type: "Slot Game", game_image: "" },
-        { game_name: "ROBIN HOOD", game_code: "17184971ad9e01777cb2c06465f479fb", game_type: "Slot Game", game_image: "" },
-        { game_name: "CRAZY BUFFALO", game_code: "e5a2c89d257b68a1c2855e00e76bc934", game_type: "Slot Game", game_image: "" },
+        { game_name: "SUPER ELEMENTS", game_code: "756fbfeac906e1e78e49ee74fa20b367", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-049.png?v=1781256805249" },
+        { game_name: "ROBIN HOOD", game_code: "17184971ad9e01777cb2c06465f479fb", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-020.png?v=1778347225914" },
+        { game_name: "CRAZY BUFFALO", game_code: "e5a2c89d257b68a1c2855e00e76bc934", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-026.png?v=1778347226937" },
         { game_name: "FORTUNE KOI", game_code: "1d45e05527b049177d2f55aeb8a26e44", game_type: "Slot Game", game_image: "" },
         { game_name: "TREASURE CRUISE", game_code: "be44b0154904b119fa44cde7debcb82e", game_type: "Slot Game", game_image: "" },
         { game_name: "WIN WIN NEKO", game_code: "9951f259f97eb5202a590284848e4592", game_type: "Slot Game", game_image: "" },
@@ -4716,7 +4716,7 @@ const fachai = {
         { game_name: "FORTUNE EGG", game_code: "93fe7c6e8ec4fba41eec4cc52aa03308", game_type: "Slot Game", game_image: "" },
         { game_name: "THREE LITTLE PIGS", game_code: "d8135aaf7a26d46c5f05811b470fd882", game_type: "Slot Game", game_image: "" },
         { game_name: "LIGHTNING BOMB", game_code: "56c52aafb2a426512e1d9319e39525d0", game_type: "Arcade Game", game_image: "" },
-        { game_name: "ANIMAL RACING", game_code: "a1c4af9556716238cc206142191601a3", game_type: "Slot Game", game_image: "" },
+        { game_name: "ANIMAL RACING", game_code: "a1c4af9556716238cc206142191601a3", game_type: "Slot Game", game_image: "https://img.b112j.com/upload/game/AWCV2_FC/BDT/FC-SLOT-011.png?v=1778347224414" },
         { game_name: "SUPER COLOR GAME", game_code: "6a15165043642df7c8f15b81955ec6bd", game_type: "Arcade Game", game_image: "" },
         { game_name: "HOT POT PARTY", game_code: "1c5a69caf9e2f1736eab4e7989f0ed0f", game_type: "Slot Game", game_image: "" },
         { game_name: "GLORY OF ROME", game_code: "74d2c49fa6db0aaa0f21f572e853977f", game_type: "Slot Game", game_image: "" },
