@@ -7,6 +7,26 @@ interface GameFilter {
   vendor?: string | string[];
 }
 
+function isValidGameImageUrl(src: string): boolean {
+  if (!src.trim()) return false;
+  try {
+    const url = new URL(src.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/** Prefer `game_image`, then `image`; empty when neither is a usable URL. */
+function resolveCatalogImage(doc: Record<string, unknown>): string {
+  const candidates = [doc.game_image, doc.image];
+  for (const candidate of candidates) {
+    const value = String(candidate ?? '').trim();
+    if (isValidGameImageUrl(value)) return value;
+  }
+  return '';
+}
+
 function toGameTile(doc: Record<string, unknown>) {
   return {
     id: String(doc.tileId ?? doc._id),
@@ -17,7 +37,7 @@ function toGameTile(doc: Record<string, unknown>) {
     gradient: String(doc.gradient ?? ''),
     glow: String(doc.glow ?? ''),
     emoji: doc.emoji ? String(doc.emoji) : undefined,
-    image: String(doc.image ?? doc.game_image ?? ''),
+    image: resolveCatalogImage(doc),
     types: Array.isArray(doc.types) ? doc.types.map(String) : undefined,
   };
 }
