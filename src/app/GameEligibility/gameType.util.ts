@@ -52,3 +52,33 @@ export function inferGameTypeFromTitle(title: string, vendorCode?: string): stri
   }
   return 'slot';
 }
+
+export type RebateCategory = 'slot' | 'live' | 'sports' | 'poker' | 'fishing';
+
+export const REBATE_CATEGORIES: RebateCategory[] = [
+  'slot',
+  'live',
+  'sports',
+  'poker',
+  'fishing',
+];
+
+/** Maps game catalog / bet metadata into rebate UI buckets. */
+export function normalizeRebateCategory(
+  raw: string | undefined,
+  title?: string,
+  vendorCode?: string
+): RebateCategory {
+  const s = String(raw ?? '').trim().toLowerCase();
+  if (s.includes('poker')) return 'poker';
+  if (s === 'fish' || s === 'fishing' || s.includes('fish')) return 'fishing';
+  if (s.includes('sport') || s.includes('cricket')) return 'sports';
+  if (s.includes('live') || s.includes('casino') || s.includes('baccarat')) return 'live';
+  if (s.includes('slot')) return 'slot';
+
+  const inferred = inferGameTypeFromTitle(title ?? '', vendorCode);
+  if (inferred === 'fishing') return 'fishing';
+  if (inferred === 'sports') return 'sports';
+  if (inferred === 'live') return 'live';
+  return 'slot';
+}

@@ -34,8 +34,8 @@ dayjs.extend(timezone);
 
 const validateUserWithdrawal = async (userId: string, amount: number) => {
   // ✅ 0. Minimum/Maximum rules
-  if (amount < 500) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Minimum withdrawal is 500 TK.');
+  if (amount < 100) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Minimum withdrawal is 100 TK.');
   }
   if (amount > 300000) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Maximum withdrawal is 300,000 TK.');
