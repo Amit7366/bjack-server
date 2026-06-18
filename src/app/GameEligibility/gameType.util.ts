@@ -17,6 +17,7 @@ export function normalizeLobbyCatalogType(raw: string, title?: string): string {
   if (s.includes('slot')) return 'slot';
   if (s.includes('lottery')) return 'lottery';
   if (s.includes('arcade')) return 'arcade';
+  if (s.includes('instant')) return 'instant';
   if (s.includes('crash') || s.includes('aviator')) return 'crash';
   if (s.includes('sport') || s.includes('cricket')) return 'sports';
   if (
@@ -30,7 +31,7 @@ export function normalizeLobbyCatalogType(raw: string, title?: string): string {
     s.includes('poker') ||
     s.includes('table')
   ) {
-    return 'table';
+    return 'table game';
   }
   if (s.includes('live') || s.includes('casino')) return 'casino';
 
@@ -45,7 +46,7 @@ export function normalizeLobbyCatalogType(raw: string, title?: string): string {
     u.includes('DRAGON TIGER') ||
     u.includes('SIC BO')
   ) {
-    return 'table';
+    return 'table game';
   }
   if (
     u.includes('CRAZY TIME') ||
@@ -58,10 +59,20 @@ export function normalizeLobbyCatalogType(raw: string, title?: string): string {
   return 'slot';
 }
 
+/** Lobby URL kind → MongoDB `types[]` values used for filtering. */
+export function lobbyKindToCatalogTypes(kind: string): string[] {
+  const k = String(kind ?? '').trim().toLowerCase();
+  if (!k) return [];
+  if (k === 'casino') return ['casino', 'live'];
+  if (k === 'table') return ['table', 'table game'];
+  if (k === 'slot') return ['slot', 'instant'];
+  return [k];
+}
+
 /** Maps lobby catalog `types[]` value to turnover / rebate `game_type` bucket. */
 export function lobbyCatalogTypeToTurnover(lobbyType: string): string {
   const s = String(lobbyType ?? '').trim().toLowerCase();
-  if (s === 'casino' || s === 'table') return 'live';
+  if (s === 'casino' || s === 'table' || s.includes('table')) return 'live';
   if (s === 'slot' || s === 'crash' || s === 'sports' || s === 'fishing') return s;
   return 'slot';
 }

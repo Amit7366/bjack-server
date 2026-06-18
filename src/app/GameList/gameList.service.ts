@@ -1,5 +1,6 @@
 // gameList.service.ts
 import { GameCatalogModel } from '../../models/GameCatalogModel';
+import { lobbyKindToCatalogTypes } from '../GameEligibility/gameType.util';
 
 interface GameFilter {
   provider?: string;
@@ -88,7 +89,8 @@ export const getVendorGames = async (vendorCodes: string[], category?: string) =
   const categoryNorm = String(category ?? '').trim().toLowerCase();
 
   if (categoryNorm) {
-    query.types = categoryNorm;
+    const catalogTypes = lobbyKindToCatalogTypes(categoryNorm);
+    query.types = catalogTypes.length === 1 ? catalogTypes[0] : { $in: catalogTypes };
   }
 
   const vendors = vendorCodes.filter((v) => v !== LOBBY_VENDOR_ALL);
