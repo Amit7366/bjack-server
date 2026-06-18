@@ -81,11 +81,22 @@ export const getFilteredGames = async (filter: GameFilter) => {
   };
 };
 
-export const getVendorGames = async (vendorCodes: string[]) => {
-  const query =
-    vendorCodes.length > 0
-      ? { vendorCode: { $in: vendorCodes } }
-      : { vendorCode: { $exists: true, $ne: null } };
+const LOBBY_VENDOR_ALL = 'all';
+
+export const getVendorGames = async (vendorCodes: string[], category?: string) => {
+  const query: Record<string, unknown> = {};
+  const categoryNorm = String(category ?? '').trim().toLowerCase();
+
+  if (categoryNorm) {
+    query.types = categoryNorm;
+  }
+
+  const vendors = vendorCodes.filter((v) => v !== LOBBY_VENDOR_ALL);
+  if (vendors.length > 0) {
+    query.vendorCode = { $in: vendors };
+  } else if (!categoryNorm) {
+    query.vendorCode = { $exists: true, $ne: null };
+  }
 
   const games = await GameCatalogModel.find(query).sort({ vendorCode: 1, sortOrder: 1 }).lean();
   const seen = new Set<string>();

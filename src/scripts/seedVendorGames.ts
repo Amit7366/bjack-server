@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { vendorGames } from '../data/vendorGamesData';
 import { GameCatalogModel } from '../models/GameCatalogModel';
 import { connectSeedDb } from './seedUtils';
-import { inferGameTypeFromTitle } from '../app/GameEligibility/gameType.util';
+import { inferGameTypeFromTitle, lobbyCatalogTypeToTurnover } from '../app/GameEligibility/gameType.util';
 
 dotenv.config();
 
@@ -24,7 +24,8 @@ const seedVendorGames = async () => {
     let updatedCount = 0;
 
     for (const game of vendorGames) {
-      const gameType = game.types[0] ?? inferGameTypeFromTitle(game.title, game.vendorCode);
+      const lobbyType = game.types[0] ?? inferGameTypeFromTitle(game.title, game.vendorCode);
+      const gameType = lobbyCatalogTypeToTurnover(lobbyType);
 
       const doc: Record<string, unknown> = {
         tileId: game.tileId,

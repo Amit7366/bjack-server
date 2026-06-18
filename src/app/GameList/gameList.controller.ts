@@ -79,7 +79,13 @@ export const getFilteredGamesHandler = async (req: Request, res: Response) => {
 
 export const getVendorGamesHandler = async (req: Request, res: Response) => {
   const vendorCodes = parseVendorQuery(req.query.vendor);
-  const result = await GameService.getVendorGames(vendorCodes);
+  const category =
+    typeof req.query.category === 'string'
+      ? req.query.category
+      : typeof req.query.kind === 'string'
+        ? req.query.kind
+        : undefined;
+  const result = await GameService.getVendorGames(vendorCodes, category);
 
   sendResponse(res, {
     statusCode: 200,

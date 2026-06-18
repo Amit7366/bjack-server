@@ -1,5 +1,5 @@
 import { allProviderGames } from './gameData';
-import { normalizeTurnoverGameType } from '../app/GameEligibility/gameType.util';
+import { normalizeLobbyCatalogType } from '../app/GameEligibility/gameType.util';
 
 export type VendorGameSeed = {
   tileId: string;
@@ -199,8 +199,8 @@ function resolveProviderMeta(provider: string): ProviderVendorMeta {
   };
 }
 
-function catalogGameType(rawType: string): string {
-  return normalizeTurnoverGameType(rawType);
+function catalogGameType(rawType: string, title?: string): string {
+  return normalizeLobbyCatalogType(rawType, title);
 }
 
 function buildVendorGameSeed(
@@ -214,7 +214,7 @@ function buildVendorGameSeed(
   sortOrder: number,
 ): VendorGameSeed {
   const meta = resolveProviderMeta(provider);
-  const gameType = catalogGameType(game.game_type);
+  const lobbyType = catalogGameType(game.game_type, game.game_name);
   const image = game.game_image?.trim() ?? '';
   const hasImage = Boolean(image);
 
@@ -227,7 +227,7 @@ function buildVendorGameSeed(
     gradient: hasImage ? meta.gradient : '',
     glow: hasImage ? meta.glow : '',
     image,
-    types: [gameType],
+    types: [lobbyType],
     vendorCode: meta.vendorCode,
     sortOrder,
   };
