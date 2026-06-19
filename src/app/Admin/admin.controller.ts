@@ -93,6 +93,24 @@ const giveSignupBonus = catchAsync(async (req, res) => {
     data: result,
   });
 });
+
+const giveDepositToUser = catchAsync(async (req, res) => {
+  const userId = req.params.userId;
+  const { amount, paymentMethod, promoCode } = req.body;
+
+  const result = await AdminServices.giveDepositToUser(userId, {
+    amount,
+    paymentMethod,
+    promoCode,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: result.message,
+    data: result,
+  });
+});
 const updateUserStatus = catchAsync(async (req, res) => {
   const userId = req.params.userId;
   const { status } = req.body;
@@ -209,6 +227,7 @@ export const AdminControllers = {
   updateAdmin,
   getUserPromotionSummary,
   giveSignupBonus,
+  giveDepositToUser,
   updateUserStatus,
   assignCustomerOfficer,
   getMyUsers,

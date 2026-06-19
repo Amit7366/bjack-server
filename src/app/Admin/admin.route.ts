@@ -2,7 +2,7 @@ import express from 'express';
 
 import { USER_ROLE } from '../User/user.constant';
 import { AdminControllers } from './admin.controller';
-import { updateAdminValidationSchema ,giveSignupBonusValidation,updateUserStatusValidation, assignCustomerOfficerValidation} from './admin.validation';
+import { updateAdminValidationSchema ,giveSignupBonusValidation,updateUserStatusValidation, assignCustomerOfficerValidation, giveDepositValidation} from './admin.validation';
 import auth from '../middleware/auth';
 import validateRequest from '../middleware/validateRequest';
 
@@ -74,6 +74,12 @@ router.post(
   auth(USER_ROLE.admin, USER_ROLE.superAdmin),
   validateRequest(giveSignupBonusValidation),
   AdminControllers.giveSignupBonus
+);
+router.post(
+  '/users/:userId/give-deposit',
+  auth(USER_ROLE.admin, USER_ROLE.superAdmin),
+  validateRequest(giveDepositValidation),
+  AdminControllers.giveDepositToUser
 );
 router.patch(
   '/users/:userId/status',

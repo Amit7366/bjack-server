@@ -65,10 +65,17 @@ export const assignCustomerOfficerValidation = z.object({
     officerId: z.string().min(1, 'officerId is required'),
   }),
 });
+export const giveDepositValidation = z.object({
+  body: z.object({
+    amount: z.number().min(1, 'Amount must be at least 1'),
+    paymentMethod: z.enum(['bkash', 'nagad', 'rocket']).optional(),
+    promoCode: z.string().trim().optional(),
+  }),
+});
 export const AdminValidations = {
   createAdminValidationSchema,
   updateAdminValidationSchema,
   giveSignupBonusValidation,
   updateUserStatusValidation,
-
+  giveDepositValidation,
 };

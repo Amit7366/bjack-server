@@ -24,7 +24,7 @@ import { NoDepositBalanceRoutes } from '../NoDepositBalance/noDepositBalance.rou
 import { MyFavouriteCustomerRoutes } from '../MyFavouriteCustomers/myFavouriteCustomer.routes';
 import { PromotionRoutes } from '../Promotion/promotion.route';
 import ReferralRoutes from '../Referral/referral.routes';
-import { MemberBonusRewardRoutes } from '../MemberBonusReward/memberBonusReward.route';
+import { RewardOfferRoutes } from '../RewardOffer/rewardOffer.route';
 import { SignInRewardRoutes } from '../SignInReward/signInReward.route';
 import { GameEligibilityRoutes } from '../GameEligibility/gameEligibility.route';
 import { KycRoutes } from '../Kyc/kyc.route';
@@ -61,7 +61,7 @@ const moduleRoutes = [
   { path: '/promotions', route: PromotionRoutes },
   { path: '/referral', route: ReferralRoutes },
   { path: '/sign-in-reward', route: SignInRewardRoutes },
-  { path: '/member-bonus-reward', route: MemberBonusRewardRoutes },
+  { path: '/reward-offers', route: RewardOfferRoutes },
   { path: '/games/eligibility', route: GameEligibilityRoutes },
   { path: '/kyc', route: KycRoutes },
   { path: '/deposit-payment-accounts', route: DepositPaymentAccountRoutes },

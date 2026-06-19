@@ -26,6 +26,7 @@ import { TurnoverActivity } from '../Turnover/turnover.model';
 import { BetTransaction } from '../Transaction/betTransaction.model';
 import { getMyReferralSummary } from '../Referral/referral.service';
 import { ReferralModel } from '../Referral/referral.model';
+import { TransactionService } from '../Transaction/transaction.service';
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Admin list/search
@@ -911,6 +912,61 @@ const getUsersWithHighBalanceFromDB = async () => {
   return result;
 };
 
+type GiveDepositPayload = {
+  amount: number;
+  paymentMethod?: 'bkash' | 'nagad' | 'rocket';
+  promoCode?: string;
+};
+
+const giveDepositToUser = async (userId: string, payload: GiveDepositPayload) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  let balance = await UserBalance.findOne({ userId: user._id });
+  if (!balance) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User balance not found');
+  }
+
+  const memberId = String(balance.id ?? '').trim();
+  if (!memberId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Member id not found for user');
+  }
+
+  const promoCode = payload.promoCode?.trim() || 'NO_PROMO';
+  const paymentMethod = payload.paymentMethod ?? 'bkash';
+  const transactionId = `ADMIN-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
+  const pendingTrx = await TransactionService.createManualDeposit({
+    userId: user._id,
+    id: memberId,
+    amount: payload.amount,
+    paymentMethod,
+    transactionId,
+    agentNumber: 'ADMIN',
+    walletNumber: 'ADMIN-CREDIT',
+    promoCode,
+  });
+
+  const approved = await TransactionService.markDepositSuccess(
+    String(pendingTrx._id),
+    promoCode,
+  );
+
+  const updatedBalance = await UserBalance.findOne({ userId: user._id }).lean();
+  const turnover = await TurnoverTracking.findOne({ depositId: pendingTrx._id }).lean();
+
+  return {
+    message: `Deposit of ${payload.amount} TK credited successfully`,
+    transaction: approved,
+    balance: Number(updatedBalance?.currentBalance ?? 0).toFixed(2),
+    turnoverRequired: Number(turnover?.turnoverRequired ?? 0),
+    bonusAmount: Number(approved.bonusAmount ?? 0),
+    totalCredited: Number(approved.totalCredited ?? payload.amount),
+  };
+};
+
 export const AdminServices = {
   getAllAdminsFromDB,
   getSingleAdminFromDB,
@@ -918,6 +974,7 @@ export const AdminServices = {
   deleteAdminFromDB,
   getUserPromotionSummary,
   giveSignupBonus,          // ⬅ updated
+  giveDepositToUser,
   updateUserStatus,
   assignCustomerOfficer,
   getUsersAssignedToOfficer,
