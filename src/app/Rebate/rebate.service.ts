@@ -211,15 +211,12 @@ async function buildManualSummary(
 }
 
 async function generateOrderNo(
-  userId: string,
   dayKey: string,
   session: mongoose.ClientSession
 ): Promise<string> {
-  const count = await RebateClaim.countDocuments({
-    userId: new Types.ObjectId(userId),
-    dayKey,
-  }).session(session);
   const suffix = dayKeyToOrderSuffix(dayKey);
+  // orderNo is globally unique — count all claims for this day, not per user.
+  const count = await RebateClaim.countDocuments({ dayKey }).session(session);
   return `${REBATE_ORDER_PREFIX}${suffix}${String(count + 1).padStart(3, '0')}`;
 }
 
@@ -242,7 +239,7 @@ export async function claimDailyRebate(userId: string) {
       throw new AppError(httpStatus.BAD_REQUEST, 'No rebate available to claim');
     }
 
-    const orderNo = await generateOrderNo(userId, dayKey, session);
+    const orderNo = await generateOrderNo(dayKey, session);
     const claimedCategoryAmounts = allocateClaimToCategories(
       state.claimable,
       state.remaining
