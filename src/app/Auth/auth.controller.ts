@@ -11,7 +11,7 @@ import { UserBalance } from '../Transaction/userBalance.model';
 export const loginUser = catchAsync(async (req, res) => {
   try {
     const result = await AuthServices.loginUser(req.body);
-    const { refreshToken, accessToken, needsPasswordChange, memberId } = result;
+    const { refreshToken, accessToken, needsPasswordChange, memberId, status } = result;
 
     let initialBal = 0;
 
@@ -42,6 +42,7 @@ export const loginUser = catchAsync(async (req, res) => {
         needsPasswordChange,
         memberId: memberId || undefined,
         balance: Number(initialBal).toFixed(2),
+        status: status || 'active',
       },
     });
   } catch (err: any) {

@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import AppError from '../errors/AppError';
 import { LoginBonusTracking } from '../User/loginBonusTracking.model';
 import { UserBalance } from '../Transaction/userBalance.model';
+import { assertAccountActiveForRestrictedAction } from '../User/userAccountStatus.util';
 import { SpinHistory } from './spin.model';
 import {
   SPIN_ALLOWED_AMOUNTS,
@@ -122,6 +123,16 @@ export class SpinService {
   }) {
     const { userObjectId, sbmId, ip, ua } = opts;
     const now = new Date();
+
+    try {
+      await assertAccountActiveForRestrictedAction(userObjectId);
+    } catch (error) {
+      const message =
+        error instanceof AppError
+          ? error.message
+          : 'This action is not allowed for your account.';
+      return { ok: false as const, code: 403 as const, message };
+    }
 
     const balance = await UserBalance.findOne({ userId: userObjectId, id: sbmId });
     if (!balance) {

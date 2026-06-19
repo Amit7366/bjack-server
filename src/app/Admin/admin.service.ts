@@ -371,6 +371,8 @@ const updateUserStatus = async (userId: string, status: string) => {
 
   await User.updateOne({ _id: userId }, { $set: { status } });
   await NormalUser.updateOne({ user: userId }, { $set: { status } });
+
+  return { userId, status };
 };
 
 const assignCustomerOfficer = async (userId: string, officerId: string) => {

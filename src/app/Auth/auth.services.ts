@@ -90,6 +90,7 @@ export const loginUser = async (payload: TLoginUser) => {
     refreshToken,
     needsPasswordChange: !!user.needsPasswordChange,
     memberId: id,
+    status: (user.status as string) || 'active',
   };
 };
 

@@ -9,6 +9,7 @@ import {
   isGameTypeEligible,
   normalizeTurnoverGameType,
 } from './gameType.util';
+import { accountStatusEligibilityReason, getUserAccountStatus } from '../User/userAccountStatus.util';
 
 export type GameEligibilityResult = {
   allowed: boolean;
@@ -119,6 +120,20 @@ export async function checkGameLaunchEligibility(
       promoCode: null,
       restricted: false,
       reason: 'Game code is required',
+    };
+  }
+
+  const accountStatus = await getUserAccountStatus(userId);
+  const statusReason = accountStatusEligibilityReason(accountStatus);
+  if (statusReason) {
+    return {
+      allowed: false,
+      gameCode: code,
+      gameType: null,
+      eligibleGameTypes: ['all'],
+      promoCode: null,
+      restricted: false,
+      reason: statusReason,
     };
   }
 

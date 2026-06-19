@@ -1,6 +1,9 @@
 // gameList.service.ts
 import { GameCatalogModel } from '../../models/GameCatalogModel';
-import { lobbyKindToCatalogTypes } from '../GameEligibility/gameType.util';
+import {
+  gameTypesMatchLobbyKind,
+  normalizeLobbyCatalogType,
+} from '../GameEligibility/gameType.util';
 
 interface GameFilter {
   provider?: string;
@@ -28,6 +31,23 @@ function resolveCatalogImage(doc: Record<string, unknown>): string {
   return '';
 }
 
+function resolveCatalogTypes(doc: Record<string, unknown>): string[] | undefined {
+  const out = new Set<string>();
+  if (Array.isArray(doc.types)) {
+    for (const t of doc.types) {
+      const value = String(t).trim().toLowerCase();
+      if (value) out.add(value);
+    }
+  }
+  const rawType = String(doc.game_type ?? '').trim();
+  if (rawType) {
+    const normalized = normalizeLobbyCatalogType(rawType, String(doc.title ?? doc.game_name ?? ''));
+    out.add(normalized);
+    out.add(rawType.toLowerCase());
+  }
+  return out.size ? [...out] : undefined;
+}
+
 function toGameTile(doc: Record<string, unknown>) {
   return {
     id: String(doc.tileId ?? doc._id),
@@ -39,7 +59,7 @@ function toGameTile(doc: Record<string, unknown>) {
     glow: String(doc.glow ?? ''),
     emoji: doc.emoji ? String(doc.emoji) : undefined,
     image: resolveCatalogImage(doc),
-    types: Array.isArray(doc.types) ? doc.types.map(String) : undefined,
+    types: resolveCatalogTypes(doc),
   };
 }
 
@@ -88,11 +108,6 @@ export const getVendorGames = async (vendorCodes: string[], category?: string) =
   const query: Record<string, unknown> = {};
   const categoryNorm = String(category ?? '').trim().toLowerCase();
 
-  if (categoryNorm) {
-    const catalogTypes = lobbyKindToCatalogTypes(categoryNorm);
-    query.types = catalogTypes.length === 1 ? catalogTypes[0] : { $in: catalogTypes };
-  }
-
   const vendors = vendorCodes.filter((v) => v !== LOBBY_VENDOR_ALL);
   if (vendors.length > 0) {
     query.vendorCode = { $in: vendors };
@@ -106,6 +121,7 @@ export const getVendorGames = async (vendorCodes: string[], category?: string) =
 
   for (const doc of games) {
     const tile = toGameTile(doc as Record<string, unknown>);
+    if (categoryNorm && !gameTypesMatchLobbyKind(resolveCatalogTypes(doc as Record<string, unknown>), categoryNorm)) continue;
     const dedupeKey = tile.gameCode?.trim() || tile.id;
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);

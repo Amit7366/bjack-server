@@ -18,6 +18,7 @@ import { SignupBonusTracking } from '../User/signupBonusTracking.model';
 import { LoginBonusTracking } from '../User/loginBonusTracking.model';
 import { ReferralRewardModel } from '../ReferralRewardTracker/referralReward.model';
 import { ReferralModel } from '../Referral/referral.model';
+import { assertAccountActiveForRestrictedAction } from '../User/userAccountStatus.util';
 import { Types } from 'mongoose';
 import { GameTxnRecord } from '../GameTxnRecords/models/GameTxnRecord';
 import { GameTxnRecordBackup } from '../GameTxnRecords/models/gameTxnRecordBackup.model';
@@ -129,21 +130,8 @@ export const createManualWithdraw = async (data: Partial<ITransaction>) => {
   }
 
   // 1) Account status
-  const user = await User.findById(userId).lean();
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-  }
-  if (user.status !== 'active') {
-    const reasons: Record<'frozen' | 'deactivated' | 'pending', string> = {
-      frozen: 'Your account is temporarily frozen. Please contact support.',
-      deactivated: 'Your account is deactivated. Withdrawals are not allowed.',
-      pending: 'Your account is under review. Please complete verification.',
-    };
-    const reason =
-      reasons[user.status as 'frozen' | 'deactivated' | 'pending'] ||
-      'Withdrawals are not allowed for your account.';
-    throw new AppError(httpStatus.FORBIDDEN, reason);
-  }
+  await assertAccountActiveForRestrictedAction(userId.toString());
+
   const hasDeposit = await Transaction.exists({
     userId,
     transactionType: 'deposit',

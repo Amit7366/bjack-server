@@ -15,7 +15,7 @@ export function normalizeLobbyCatalogType(raw: string, title?: string): string {
   const s = String(raw ?? '').trim().toLowerCase();
   if (s === 'fish' || s === 'fishing' || s.includes('fish')) return 'fishing';
   if (s.includes('slot')) return 'slot';
-  if (s.includes('lottery')) return 'lottery';
+  if (s.includes('bingo') || s.includes('lottery')) return 'lottery';
   if (s.includes('arcade')) return 'arcade';
   if (s.includes('instant')) return 'instant';
   if (s.includes('crash') || s.includes('aviator')) return 'crash';
@@ -37,7 +37,7 @@ export function normalizeLobbyCatalogType(raw: string, title?: string): string {
 
   const u = String(title ?? '').toUpperCase();
   if (u.includes('FISH') || u.includes('FISHING')) return 'fishing';
-  if (u.includes('LOTTERY')) return 'lottery';
+  if (u.includes('LOTTERY') || u.includes('BINGO')) return 'lottery';
   if (u.includes('AVIATOR')) return 'crash';
   if (
     u.includes('BACCARAT') ||
@@ -59,14 +59,59 @@ export function normalizeLobbyCatalogType(raw: string, title?: string): string {
   return 'slot';
 }
 
+/** Accepted MongoDB `types[]` values per lobby URL segment. */
+export const LOBBY_KIND_TYPE_ALIASES: Record<string, readonly string[]> = {
+  slot: ['slot', 'slot game', 'slots', 'instant', 'instant game'],
+  arcade: ['arcade', 'arcade game'],
+  table: ['table', 'table game'],
+  fishing: ['fishing', 'fish', 'fish game'],
+  lottery: ['lottery', 'lottery game', 'bingo', 'bingo game'],
+  crash: ['crash', 'crash game'],
+  sports: ['sports', 'sport', 'sportsbook'],
+  casino: ['casino', 'live', 'live casino', 'live game'],
+};
+
 /** Lobby URL kind → MongoDB `types[]` values used for filtering. */
 export function lobbyKindToCatalogTypes(kind: string): string[] {
   const k = String(kind ?? '').trim().toLowerCase();
   if (!k) return [];
-  if (k === 'casino') return ['casino', 'live'];
-  if (k === 'table') return ['table', 'table game'];
-  if (k === 'slot') return ['slot', 'instant'];
-  return [k];
+  return [...(LOBBY_KIND_TYPE_ALIASES[k] ?? [k])];
+}
+
+/** Whether a single catalog `types[]` entry belongs to a lobby URL segment. */
+export function catalogTypeMatchesLobbyKind(gameType: string, kind: string): boolean {
+  const t = String(gameType ?? '').trim().toLowerCase();
+  if (!t) return false;
+  const k = String(kind ?? '').trim().toLowerCase();
+  if (!k) return true;
+
+  if (lobbyKindToCatalogTypes(k).includes(t)) return true;
+
+  switch (k) {
+    case 'fishing':
+      return t.includes('fish');
+    case 'slot':
+      return t.includes('slot') || t.includes('instant');
+    case 'arcade':
+      return t.includes('arcade');
+    case 'table':
+      return t.includes('table');
+    case 'lottery':
+      return t.includes('lottery') || t.includes('bingo');
+    case 'crash':
+      return t.includes('crash') || t.includes('aviator');
+    case 'sports':
+      return t.includes('sport') || t.includes('cricket');
+    case 'casino':
+      return t.includes('casino') || t.includes('live');
+    default:
+      return t === k || t.includes(k);
+  }
+}
+
+export function gameTypesMatchLobbyKind(types: string[] | undefined, kind: string): boolean {
+  if (!types?.length) return false;
+  return types.some((t) => catalogTypeMatchesLobbyKind(t, kind));
 }
 
 /** Maps lobby catalog `types[]` value to turnover / rebate `game_type` bucket. */
