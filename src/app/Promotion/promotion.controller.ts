@@ -14,6 +14,18 @@ const getDepositPromotions = catchAsync(async (_req, res) => {
   });
 });
 
+const getPublicDepositPromotions = catchAsync(async (_req, res) => {
+  const list = PromotionService.getPublicDepositPromotions();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Public deposit promotions fetched",
+    data: list,
+  });
+});
+
 export const PromotionController = {
   getDepositPromotions,
+  getPublicDepositPromotions,
 };

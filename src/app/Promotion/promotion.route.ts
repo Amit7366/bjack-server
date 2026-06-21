@@ -5,6 +5,8 @@ import { PromotionController } from "./promotion.controller";
 
 const router = Router();
 
+router.get("/deposit/public", PromotionController.getPublicDepositPromotions);
+
 router.get(
   "/deposit",
   auth(USER_ROLE.user, USER_ROLE.admin, USER_ROLE.superAdmin),

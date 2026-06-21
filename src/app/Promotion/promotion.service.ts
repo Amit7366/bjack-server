@@ -28,6 +28,10 @@ export const PromotionService = {
     return PROMOTION_LIST.map((p) => toDto(p));
   },
 
+  getPublicDepositPromotions(): DepositPromotionDto[] {
+    return PROMOTION_LIST.filter((p) => p.code !== "NO_PROMO").map((p) => toDto(p));
+  },
+
   isValidPromoCode(code: string): boolean {
     return PROMOTION_LIST.some((p) => p.code === code);
   },
