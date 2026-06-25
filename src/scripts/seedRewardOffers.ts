@@ -5,6 +5,17 @@ import { connectSeedDb, upsertByKey } from './seedUtils';
 
 dotenv.config();
 
+const ACTIVE_REWARD_OFFER_SLUGS = new Set([
+  'total-deposit-platinum-25000',
+  'total-deposit-gold-10000',
+  'night-owl-18',
+  'vip-club-150',
+  'cashback-king-45',
+  'refer-legend-10',
+  'refer-1-friend',
+  'refer-3-friends',
+]);
+
 const REWARD_OFFERS = [
   {
     slug: 'member-bonus-10',
@@ -811,12 +822,19 @@ const REWARD_OFFERS = [
 
 async function main() {
   await connectSeedDb();
+  const offers = REWARD_OFFERS.map((offer) => ({
+    ...offer,
+    isActive: ACTIVE_REWARD_OFFER_SLUGS.has(offer.slug),
+  }));
   const count = await upsertByKey(
     RewardOffer as mongoose.Model<unknown>,
     'slug',
-    REWARD_OFFERS,
+    offers,
   );
-  console.log(`✅ Seeded ${count} reward offers (${REWARD_OFFERS.length} total definitions)`);
+  const activeCount = offers.filter((offer) => offer.isActive).length;
+  console.log(
+    `✅ Seeded ${count} reward offers (${offers.length} total, ${activeCount} active)`,
+  );
   process.exit(0);
 }
 

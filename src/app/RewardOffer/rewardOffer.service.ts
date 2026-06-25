@@ -8,7 +8,7 @@ import { LoginBonusTracking } from '../User/loginBonusTracking.model';
 import { ReferralRewardModel } from '../ReferralRewardTracker/referralReward.model';
 import { Transaction } from '../Transaction/transaction.model';
 import { UserBalance } from '../Transaction/userBalance.model';
-import { REWARD_OFFER_TZ } from './rewardOffer.constants';
+import { REWARD_OFFER_TURNOVER_MULTIPLIER, REWARD_OFFER_TZ } from './rewardOffer.constants';
 import {
   IRewardOffer,
   RewardOfferCriteriaProgress,
@@ -120,7 +120,7 @@ function buildMemberView(
     title: offer.title,
     description: offer.description,
     bonusAmount: offer.bonusAmount,
-    turnoverMultiplier: offer.turnoverMultiplier,
+    turnoverMultiplier: REWARD_OFFER_TURNOVER_MULTIPLIER,
     cooldownHours: offer.cooldownHours,
     criteriaType: offer.criteriaType,
     criteriaValue: offer.criteriaValue,
@@ -200,7 +200,7 @@ export async function claimRewardOffer(userId: string, offerId: string) {
     }
 
     const bonusAmount = offer.bonusAmount;
-    const turnoverRequired = bonusAmount * Number(offer.turnoverMultiplier ?? 1);
+    const turnoverRequired = bonusAmount * REWARD_OFFER_TURNOVER_MULTIPLIER;
     const now = new Date();
 
     await LoginBonusTracking.create(

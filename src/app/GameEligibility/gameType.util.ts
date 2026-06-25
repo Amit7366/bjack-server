@@ -18,7 +18,8 @@ export function normalizeLobbyCatalogType(raw: string, title?: string): string {
   if (s.includes('bingo') || s.includes('lottery')) return 'lottery';
   if (s.includes('arcade')) return 'arcade';
   if (s.includes('instant')) return 'instant';
-  if (s.includes('mini')) return 'mini';
+  if (s.includes('poker')) return 'poker';
+  if (s.includes('multiplayer')) return 'multiplayer';
   if (s.includes('lobby')) return 'lobby';
   if (s.includes('dice')) return 'dice';
   if (s.includes('crash') || s.includes('aviator')) return 'crash';
@@ -65,8 +66,8 @@ export function normalizeLobbyCatalogType(raw: string, title?: string): string {
 /** Accepted MongoDB `types[]` values per lobby URL segment. */
 export const LOBBY_KIND_TYPE_ALIASES: Record<string, readonly string[]> = {
   slot: ['slot', 'slot game', 'slots', 'instant', 'instant game', 'mini'],
-  arcade: ['arcade', 'arcade game'],
-  table: ['table', 'table game', 'roulette', 'dice'],
+  arcade: ['arcade', 'arcade game', 'multiplayer', 'multiplayer game'],
+  table: ['table', 'table game', 'roulette', 'dice', 'poker', 'poker game'],
   fishing: ['fishing', 'fish', 'fish game'],
   lottery: ['lottery', 'lottery game', 'bingo', 'bingo game'],
   crash: ['crash', 'crash game'],
@@ -96,9 +97,9 @@ export function catalogTypeMatchesLobbyKind(gameType: string, kind: string): boo
     case 'slot':
       return t.includes('slot') || t.includes('instant') || t.includes('mini');
     case 'arcade':
-      return t.includes('arcade');
+      return t.includes('arcade') || t.includes('multiplayer');
     case 'table':
-      return t.includes('table') || t.includes('roulette') || t.includes('dice');
+      return t.includes('table') || t.includes('roulette') || t.includes('dice') || t.includes('poker');
     case 'lottery':
       return t.includes('lottery') || t.includes('bingo');
     case 'crash':

@@ -1,5 +1,7 @@
 export const REWARD_OFFER_TZ = 'Asia/Dhaka';
 
+export const REWARD_OFFER_TURNOVER_MULTIPLIER = 17;
+
 export const REWARD_OFFER_CRITERIA_TYPES = [
   'none',
   'daily_deposit',
