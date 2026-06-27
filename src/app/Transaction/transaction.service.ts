@@ -195,6 +195,70 @@ export const createManualWithdraw = async (data: Partial<ITransaction>) => {
   return trx;
 };
 
+export const createAdminManualWithdraw = async (data: Partial<ITransaction>) => {
+  const {
+    userId,
+    id,
+    amount,
+    paymentMethod,
+    transactionId,
+    walletNumber,
+    accountHolderName,
+  } = data;
+
+  if (
+    !userId ||
+    !id ||
+    amount == null ||
+    !paymentMethod ||
+    !transactionId ||
+    !walletNumber ||
+    !accountHolderName
+  ) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Missing required fields');
+  }
+
+  const amt = Number(amount);
+  if (!Number.isFinite(amt) || amt <= 0) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid amount');
+  }
+
+  const balanceRecord = await UserBalance.findOne({ userId }).lean();
+  if (!balanceRecord) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User balance not found');
+  }
+
+  const availableBalance = Number(balanceRecord.currentBalance ?? 0);
+  if (availableBalance < amt) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Insufficient balance');
+  }
+
+  await UserBalance.updateOne(
+    { userId },
+    {
+      $inc: {
+        currentBalance: -amt,
+        lockedBalance: amt,
+      },
+    },
+  );
+
+  const trx = await Transaction.create({
+    userId,
+    id,
+    amount: amt,
+    paymentMethod,
+    transactionType: 'withdraw',
+    transactionId,
+    status: 'pending',
+    invoiceId: uuidv4(),
+    walletNumber,
+    accountHolderName,
+  });
+
+  return trx;
+};
+
 
 export const createManualDeposit = async (data: Partial<ITransaction>) => {
   const { userId, id, amount, paymentMethod, transactionId, promoCode, agentNumber, walletNumber } = data;
@@ -1083,6 +1147,7 @@ const failAutoPayDeposit = async (
 export const TransactionService = {
   createManualDeposit,
   createManualWithdraw,
+  createAdminManualWithdraw,
   markCoinWithdrawSuccess,
   markWithdrawSuccess,
   markDepositSuccess,

@@ -27,6 +27,14 @@ import { BetTransaction } from '../Transaction/betTransaction.model';
 import { getMyReferralSummary } from '../Referral/referral.service';
 import { ReferralModel } from '../Referral/referral.model';
 import { TransactionService } from '../Transaction/transaction.service';
+import { UserWallet } from '../UserWallet/userWallet.model';
+
+function mapWalletNameToPaymentMethod(name: string): 'bkash' | 'nagad' | 'rocket' {
+  const normalized = name.trim().toLowerCase();
+  if (normalized.includes('nagad')) return 'nagad';
+  if (normalized.includes('rocket')) return 'rocket';
+  return 'bkash';
+}
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Admin list/search
@@ -969,6 +977,98 @@ const giveDepositToUser = async (userId: string, payload: GiveDepositPayload) =>
   };
 };
 
+type GiveWithdrawPayload = {
+  amount: number;
+  walletId?: string;
+  paymentMethod?: 'bkash' | 'nagad' | 'rocket';
+  walletNumber?: string;
+  accountHolderName?: string;
+};
+
+const giveWithdrawToUser = async (userId: string, payload: GiveWithdrawPayload) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  const balance = await UserBalance.findOne({ userId: user._id });
+  if (!balance) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User balance not found');
+  }
+
+  const memberId = String(balance.id ?? '').trim();
+  if (!memberId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Member id not found for user');
+  }
+
+  let paymentMethod = payload.paymentMethod;
+  let walletNumber = payload.walletNumber?.trim();
+  let accountHolderName = payload.accountHolderName?.trim();
+
+  if (payload.walletId) {
+    if (!Types.ObjectId.isValid(payload.walletId)) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'Invalid wallet id');
+    }
+
+    const wallet = await UserWallet.findOne({
+      _id: payload.walletId,
+      userId: user._id,
+    }).lean();
+
+    if (!wallet) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Wallet not found for user');
+    }
+
+    paymentMethod = mapWalletNameToPaymentMethod(wallet.walletName);
+    walletNumber = wallet.walletNumber;
+    accountHolderName = wallet.accountHolderName;
+  }
+
+  if (!paymentMethod || !walletNumber || !accountHolderName) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'Wallet details are required (select a saved wallet or enter payment details)',
+    );
+  }
+
+  const transactionId = `ADMIN-WD-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
+  const pendingTrx = await TransactionService.createAdminManualWithdraw({
+    userId: user._id,
+    id: memberId,
+    amount: payload.amount,
+    paymentMethod,
+    transactionId,
+    walletNumber,
+    accountHolderName,
+  });
+
+  const approved = await TransactionService.markWithdrawSuccess(String(pendingTrx._id));
+
+  const updatedBalance = await UserBalance.findOne({ userId: user._id }).lean();
+
+  return {
+    message: `Withdrawal of ${payload.amount} TK processed successfully`,
+    transaction: approved,
+    balance: Number(updatedBalance?.currentBalance ?? 0).toFixed(2),
+  };
+};
+
+const getUserWalletsForAdmin = async (userId: string) => {
+  if (!Types.ObjectId.isValid(userId)) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid user id');
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  return UserWallet.find({ userId: user._id })
+    .sort({ isDefault: -1, createdAt: -1 })
+    .lean();
+};
+
 export const AdminServices = {
   getAllAdminsFromDB,
   getSingleAdminFromDB,
@@ -977,6 +1077,8 @@ export const AdminServices = {
   getUserPromotionSummary,
   giveSignupBonus,          // ⬅ updated
   giveDepositToUser,
+  giveWithdrawToUser,
+  getUserWalletsForAdmin,
   updateUserStatus,
   assignCustomerOfficer,
   getUsersAssignedToOfficer,

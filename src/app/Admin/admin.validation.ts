@@ -72,10 +72,46 @@ export const giveDepositValidation = z.object({
     promoCode: z.string().trim().optional(),
   }),
 });
+export const giveWithdrawValidation = z.object({
+  body: z
+    .object({
+      amount: z.number().min(1, 'Amount must be at least 1'),
+      walletId: z.string().trim().optional(),
+      paymentMethod: z.enum(['bkash', 'nagad', 'rocket']).optional(),
+      walletNumber: z.string().trim().optional(),
+      accountHolderName: z.string().trim().optional(),
+    })
+    .superRefine((body, ctx) => {
+      if (body.walletId) return;
+
+      if (!body.paymentMethod) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Payment method is required when wallet id is not provided',
+          path: ['paymentMethod'],
+        });
+      }
+      if (!body.walletNumber) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Wallet number is required when wallet id is not provided',
+          path: ['walletNumber'],
+        });
+      }
+      if (!body.accountHolderName) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Account holder name is required when wallet id is not provided',
+          path: ['accountHolderName'],
+        });
+      }
+    }),
+});
 export const AdminValidations = {
   createAdminValidationSchema,
   updateAdminValidationSchema,
   giveSignupBonusValidation,
   updateUserStatusValidation,
   giveDepositValidation,
+  giveWithdrawValidation,
 };

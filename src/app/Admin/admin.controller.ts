@@ -111,6 +111,39 @@ const giveDepositToUser = catchAsync(async (req, res) => {
     data: result,
   });
 });
+
+const giveWithdrawToUser = catchAsync(async (req, res) => {
+  const userId = req.params.userId;
+  const { amount, walletId, paymentMethod, walletNumber, accountHolderName } = req.body;
+
+  const result = await AdminServices.giveWithdrawToUser(userId, {
+    amount,
+    walletId,
+    paymentMethod,
+    walletNumber,
+    accountHolderName,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: result.message,
+    data: result,
+  });
+});
+
+const getUserWalletsForAdmin = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+  const result = await AdminServices.getUserWalletsForAdmin(userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User wallets fetched successfully',
+    data: result,
+  });
+});
+
 const updateUserStatus = catchAsync(async (req, res) => {
   const userId = req.params.userId;
   const { status } = req.body;
@@ -228,6 +261,8 @@ export const AdminControllers = {
   getUserPromotionSummary,
   giveSignupBonus,
   giveDepositToUser,
+  giveWithdrawToUser,
+  getUserWalletsForAdmin,
   updateUserStatus,
   assignCustomerOfficer,
   getMyUsers,
