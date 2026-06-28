@@ -528,10 +528,10 @@ export const markDepositSuccess = async (
   // --- end referral release ---
 
   let promo = await PromotionService.getUserPromotion(trx.userId.toString());
-  const promoCodeToUse = promoCodeFromBody || trx.promoCode;
+  const depositPromoCode = (promoCodeFromBody || trx.promoCode || 'NO_PROMO').trim();
 
   if (!promo) {
-    if (!promoCodeToUse) {
+    if (!depositPromoCode) {
       throw new AppError(
         httpStatus.BAD_REQUEST,
         'First deposit must include a promoCode. Use "NO_PROMO" to opt out.'
@@ -539,17 +539,17 @@ export const markDepositSuccess = async (
     }
     promo = await PromotionService.lockPromotionToUser(
       trx.userId.toString(),
-      promoCodeToUse
+      depositPromoCode
     );
-  } else if (!promo.promoIsLocked && promoCodeToUse && promoCodeToUse !== 'NO_PROMO') {
+  } else if (!promo.promoIsLocked && depositPromoCode && depositPromoCode !== 'NO_PROMO') {
     promo = await PromotionService.lockPromotionToUser(
       trx.userId.toString(),
-      promoCodeToUse
+      depositPromoCode
     );
   }
 
   // ===== NO_PROMO path =====
-  if (!promo.selectedPromoCode || promo.selectedPromoCode === 'NO_PROMO') {
+  if (depositPromoCode === 'NO_PROMO') {
     // Lock NO_PROMO if needed
     if (!promo.promoIsLocked) {
       try {
@@ -565,7 +565,9 @@ export const markDepositSuccess = async (
     }
 
     trx.status = 'success';
-    trx.bonusAmount = 0;
+    const bonusAmount = Math.floor(Number(trx.amount) * 0.1);
+    const totalCredited = Number(trx.amount) + bonusAmount;
+    trx.bonusAmount = bonusAmount;
     await trx.save();
 
     // await GameTxnRecord.updateMany(
@@ -603,7 +605,6 @@ export const markDepositSuccess = async (
       { userId: trx.userId, isCompleted: false },
       { $set: { isCompleted: true, updatedAt: new Date() } }
     );
-    // Only add actual deposit to balance
     const updatedBalance = await UserBalance.findOneAndUpdate(
       { userId: trx.userId },
       [
@@ -611,14 +612,12 @@ export const markDepositSuccess = async (
           $set: {
             totalDeposit: { $add: [{ $ifNull: ["$totalDeposit", 0] }, trx.amount] },
 
-            // ✅ safety credit (negative treated as 0)
             currentBalance: {
-              $add: [{ $max: [{ $ifNull: ["$currentBalance", 0] }, 0] }, trx.amount],
+              $add: [{ $max: [{ $ifNull: ["$currentBalance", 0] }, 0] }, totalCredited],
             },
 
-            // ✅ also add to storeDbBalance
             storeDbBalance: {
-              $add: [{ $ifNull: ["$storeDbBalance", 0] }, trx.amount],
+              $add: [{ $ifNull: ["$storeDbBalance", 0] }, totalCredited],
             },
           },
         },
@@ -632,14 +631,14 @@ export const markDepositSuccess = async (
       depositId: trx._id,
       appliesToDepositId: trx._id,
       depositAmount: trx.amount,
-      bonusAmount: 0,
-      turnoverRequired: Number(trx.amount) * 1,
+      bonusAmount,
+      turnoverRequired: totalCredited * 1,
       turnoverCompleted: 0,
       eligibleGameTypes: ['all'],
       isCompleted: false,
       isClaimed: false,
       promoCode: 'NO_PROMO',
-      usageType: 'none',
+      usageType: 'always',
       maxWithdraw: null,
       isActive: true,
     });
@@ -651,23 +650,28 @@ export const markDepositSuccess = async (
 
     return {
       ...trx.toObject(),
-      bonusAmount: 0,
-      totalCredited: trx.amount,
+      bonusAmount,
+      totalCredited,
       promotionApplied: 'NO_PROMO',
     };
   }
 
   // ===== PROMO branch =====
+  const promoConfig = findPromotionByCode(depositPromoCode);
+  if (!promoConfig) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid promotion code');
+  }
+
   const {
     bonusRate,
     turnoverX,
-    selectedPromoCode,
+    code: selectedPromoCode,
     usageType,
     eligibleGames,
     maxWithdrawLimit,
     minDeposit,
     maxBonusCap,
-  } = promo;
+  } = promoConfig;
 
   if (
     turnoverX === undefined || turnoverX === null || isNaN(turnoverX as any) ||

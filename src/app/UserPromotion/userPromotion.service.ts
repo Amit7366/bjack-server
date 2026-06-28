@@ -14,13 +14,15 @@ export const PromotionService = {
     if (code === 'NO_PROMO') {
       return await UserPromotion.create({
         userId,
-        selectedPromoCode: null,
-        bonusRate: 0,
-        turnoverX: 0,
-        eligibleGames: [],
+        selectedPromoCode: 'NO_PROMO',
+        bonusRate: 0.1,
+        turnoverX: 1,
+        eligibleGames: ['all'],
         maxWithdrawLimit: null,
-        usageType: null,
-        promoIsLocked: false,
+        usageType: 'always',
+        promoIsLocked: true,
+        promoCode: 'NO_PROMO',
+        minDeposit: 0,
       });
     }
 
