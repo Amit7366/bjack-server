@@ -34,6 +34,10 @@ const NormalUserSchema = new Schema<TNormalUser, NormalUserModel>(
       // unique: true, // Ensure it's unique across users
       // sparse: true, // Allow null values for legacy users
     },
+    knownDeviceFingerprints: {
+      type: [String],
+      default: [],
+    },
 
     country: {
       type: String,
@@ -170,6 +174,8 @@ const NormalUserSchema = new Schema<TNormalUser, NormalUserModel>(
 );
 
 // Filter out deleted documents
+NormalUserSchema.index({ knownDeviceFingerprints: 1 });
+
 NormalUserSchema.pre('find', function (next) {
   this.find({ isDeleted: { $ne: true } });
   next();

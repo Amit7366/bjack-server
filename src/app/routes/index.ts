@@ -32,6 +32,7 @@ import { DepositPaymentAccountRoutes } from '../DepositPaymentAccount/depositPay
 import { RebateRoutes } from '../Rebate/rebate.route';
 import { ProfitLossRoutes } from '../ProfitLoss/profitLoss.route';
 import { SuggestionRoutes } from '../MemberSuggestion/suggestion.route';
+import { AdvertiserRoutes } from '../Advertiser/advertiser.route';
 
 const router = Router();
 
@@ -69,6 +70,7 @@ const moduleRoutes = [
   { path: '/rebate', route: RebateRoutes },
   { path: '/profit-loss', route: ProfitLossRoutes },
   { path: '/suggestions', route: SuggestionRoutes },
+  { path: '/advertisers', route: AdvertiserRoutes },
 ];
 
 moduleRoutes.forEach((r) => router.use(r.path, r.route));

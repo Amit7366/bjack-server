@@ -25,6 +25,8 @@ const loginValidationSchema = z.object({
     userName: emptyToUndefined.pipe(z.string()).optional(),
     // consider enforcing min length if you want:
     password: z.string({ required_error: 'Password is required' }),
+    deviceFingerprint: emptyToUndefined.pipe(z.string().min(1)).optional(),
+    ip: emptyToUndefined.pipe(z.string()).optional(),
   }).refine((b) => !!(b.id || b.email || b.contactNo || b.userName), {
     message: 'Provide id, email, userName or contactNo',
     path: ['body', 'identifier'],

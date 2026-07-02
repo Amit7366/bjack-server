@@ -18,6 +18,11 @@ import { NormalUser } from '../NormalUser/normalUser.model';
 import { TNormalUser } from '../NormalUser/normalUser.interface';
 import { UserBalance } from '../Transaction/userBalance.model';
 import { trackReferral } from '../Referral/referral.service';
+import {
+  assertNotSelfReferralOnDevice,
+  recordUserDevice,
+  SELF_REFERRAL_DEVICE_MESSAGE,
+} from '../Referral/referralDeviceGuard';
 
 
 
@@ -51,6 +56,18 @@ export const createUserIntoDb = async (
         let referrerUserId: string | null = null;
 
         if (payload.referredBy && payload.referredBy !== 'self') {
+          if (!payload.deviceFingerprint?.trim()) {
+            throw new AppError(
+              httpStatus.BAD_REQUEST,
+              'Device verification is required when registering with a referral code.',
+            );
+          }
+
+          await assertNotSelfReferralOnDevice({
+            referredBy: payload.referredBy,
+            deviceFingerprint: payload.deviceFingerprint,
+          });
+
           const referrer = await User.findOne({ referralId: payload.referredBy }).session(session);
           if (referrer) {
             await User.updateOne({ _id: referrer._id }, { $inc: { refferCount: 1 } }, { session });
@@ -74,6 +91,13 @@ export const createUserIntoDb = async (
 
         const [newNormalUser] = await NormalUser.create([payload], { session });
         if (!newNormalUser) throw new AppError(httpStatus.BAD_REQUEST, 'Failed to create NormalUser');
+
+        await recordUserDevice({
+          userId: newUser._id,
+          deviceFingerprint: payload.deviceFingerprint,
+          ip: payload.ip,
+          session,
+        });
 
         // ✅ Create balance record (0 TK initially)
         await UserBalance.create([{
@@ -105,6 +129,10 @@ export const createUserIntoDb = async (
         continue;
       }
 
+      if (err instanceof AppError) {
+        throw err;
+      }
+
       // Handle duplicate keys
       if (err?.code === 11000) {
         if (err.keyPattern?.userName) throw new AppError(httpStatus.CONFLICT, 'Username already exists');
@@ -118,7 +146,7 @@ export const createUserIntoDb = async (
         if (err.keyPattern?.email) throw new AppError(httpStatus.CONFLICT, 'Email already exists');
       }
 
-      if (err?.message?.includes('device')) {
+      if (err?.message?.includes('device') || err?.message === SELF_REFERRAL_DEVICE_MESSAGE) {
         throw new AppError(httpStatus.CONFLICT, err.message);
       }
 

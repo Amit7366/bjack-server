@@ -9,4 +9,6 @@ export type TLoginUser = {
   contactNo?:string;
   userName:string;
   password: string;
+  deviceFingerprint?: string;
+  ip?: string;
 };

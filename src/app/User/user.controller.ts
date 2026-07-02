@@ -16,6 +16,10 @@ const createUser = catchAsync(async (req, res) => {
 
   const { password, normalUser: userData } = req.body;
 
+  if (!userData.ip && req.ip) {
+    userData.ip = req.ip;
+  }
+
   const result = await UserServices.createUserIntoDb(
     req.file,
     password,

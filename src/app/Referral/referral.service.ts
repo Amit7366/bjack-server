@@ -181,7 +181,8 @@ export const getMyReferralSummary = async (userId: string): Promise<MyReferralSu
 
   const userObjectId = new Types.ObjectId(userId);
 
-  const [normalUser, reward, bonusAgg, referredUsers] = await Promise.all([
+  const [user, normalUser, reward, bonusAgg, referredUsers] = await Promise.all([
+    User.findById(userObjectId).select("referralId refferCount role").lean(),
     NormalUser.findOne({ user: userObjectId }).select("referralId refferCount").lean(),
     ReferralRewardModel.findOne({ referrer: userObjectId }).lean(),
     ReferralBonusTracking.aggregate<{ turnoverCompleted: number; earnedBonus: number }>([
@@ -199,17 +200,20 @@ export const getMyReferralSummary = async (userId: string): Promise<MyReferralSu
     getMyReferredUsers(userId),
   ]);
 
-  if (!normalUser?.referralId) {
+  const referralId = normalUser?.referralId ?? user?.referralId;
+  if (!referralId) {
     throw new AppError(httpStatus.NOT_FOUND, "Referral profile not found");
   }
 
   const bonus = bonusAgg[0];
-  const inviteCount = reward?.totalReferred ?? normalUser.refferCount ?? 0;
+  const inviteCount =
+    reward?.totalReferred ?? normalUser?.refferCount ?? user?.refferCount ?? 0;
   const pendingRewards = reward?.totalPendingTK ?? 0;
+  const activeDownline = normalUser?.refferCount ?? user?.refferCount ?? inviteCount;
 
   return {
-    referralId: normalUser.referralId,
-    activeDownline: normalUser.refferCount ?? inviteCount,
+    referralId,
+    activeDownline,
     inviteCount,
     totalRewards: pendingRewards,
     downlineTurnover: bonus?.turnoverCompleted ?? 0,

@@ -67,6 +67,7 @@ export type TNormalUser = {
   };
   device?: string;
   deviceFingerprint?: string;
+  knownDeviceFingerprints?: string[];
   profileImg?: string;
   isDeleted?: boolean;
 };

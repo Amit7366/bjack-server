@@ -10,7 +10,11 @@ import { UserBalance } from '../Transaction/userBalance.model';
 
 export const loginUser = catchAsync(async (req, res) => {
   try {
-    const result = await AuthServices.loginUser(req.body);
+    const loginPayload = {
+      ...req.body,
+      ip: req.body?.ip || req.ip,
+    };
+    const result = await AuthServices.loginUser(loginPayload);
     const { refreshToken, accessToken, needsPasswordChange, memberId, status } = result;
 
     let initialBal = 0;

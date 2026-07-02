@@ -12,8 +12,10 @@ import { sendEmail } from '../utilis/sendEmail';
 import { User } from '../User/user.model';
 import { sendOtpSms } from '../User/sendSms';
 import { generateOtp } from '../User/generateOtp';
+import { recordUserDevice } from '../Referral/referralDeviceGuard';
+
 export const loginUser = async (payload: TLoginUser) => {
-  const { userName, contactNo, email, password } = payload;
+  const { userName, contactNo, email, password, deviceFingerprint, ip } = payload;
 
   if ((!userName && !contactNo && !email) || !password) {
     throw new AppError(
@@ -84,6 +86,18 @@ export const loginUser = async (payload: TLoginUser) => {
 
   // Non-blocking: this is a tiny write, but keep it awaited for correctness
   await User.findByIdAndUpdate(objectId, { lastActiveAt: new Date() }).lean();
+
+  if (deviceFingerprint?.trim()) {
+    try {
+      await recordUserDevice({
+        userId: objectId,
+        deviceFingerprint,
+        ip,
+      });
+    } catch (err) {
+      console.warn('Failed to record login device fingerprint:', err);
+    }
+  }
 
   return {
     accessToken,
