@@ -9,12 +9,14 @@ const validateRequest = (schema: AnyZodObject) => {
         body: req.body,
         cookies: req.cookies,
         query: req.query,
+        params: req.params,
       });
 
       // If schema returned parsed data, prefer the sanitized values:
       if (wrapped?.body) req.body = wrapped.body;
       if (wrapped?.query) req.query = wrapped.query;
       if (wrapped?.cookies) req.cookies = wrapped.cookies;
+      if (wrapped?.params) req.params = wrapped.params as typeof req.params;
 
       return next();
     } catch (err) {
