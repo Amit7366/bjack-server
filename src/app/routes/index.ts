@@ -33,6 +33,9 @@ import { RebateRoutes } from '../Rebate/rebate.route';
 import { ProfitLossRoutes } from '../ProfitLoss/profitLoss.route';
 import { SuggestionRoutes } from '../MemberSuggestion/suggestion.route';
 import { AdvertiserRoutes } from '../Advertiser/advertiser.route';
+import { RescueFundRoutes } from '../RescueFund/rescueFund.route';
+import { TemuTicketRoutes } from '../TemuTicket/temuTicket.route';
+import { MissionRoutes } from '../Mission/mission.route';
 
 const router = Router();
 
@@ -71,6 +74,9 @@ const moduleRoutes = [
   { path: '/profit-loss', route: ProfitLossRoutes },
   { path: '/suggestions', route: SuggestionRoutes },
   { path: '/advertisers', route: AdvertiserRoutes },
+  { path: '/rescue-fund', route: RescueFundRoutes },
+  { path: '/temu-ticket', route: TemuTicketRoutes },
+  { path: '/missions', route: MissionRoutes },
 ];
 
 moduleRoutes.forEach((r) => router.use(r.path, r.route));
