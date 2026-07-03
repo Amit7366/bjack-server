@@ -92,6 +92,7 @@ const allowedOrigins = [
   'https://www.bkbaji.com',
   'https://www.bkbaji.com',
   'https://admin.bkbaji.com',
+  'https://aff.bkbaji.com',
   ...corsFromEnv,
 ];
 const corsOptions = {
