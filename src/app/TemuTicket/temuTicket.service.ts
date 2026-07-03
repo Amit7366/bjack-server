@@ -46,7 +46,7 @@ export async function getTemuTicketHistory(userId: string): Promise<TemuTicketHi
     totalClaimed: roundMoney(Number(totalRow[0]?.total ?? 0)),
     items: records.map((row) => ({
       id: String(row._id),
-      date: formatHistoryDate(new Date(row.claimedAt ?? row.createdAt ?? new Date())),
+      date: formatHistoryDate(new Date(row.claimedAt)),
       ticketName: row.ticketName,
       condition: row.condition,
       addedAmount: roundMoney(Number(row.addedAmount ?? 0)),
