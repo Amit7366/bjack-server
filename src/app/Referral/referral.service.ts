@@ -6,6 +6,7 @@ import {
   ensureReferralTurnoverTracking,
   payReferralTurnoverRewards,
 } from "../ReferralRewardTracker/referralTurnoverReward.util";
+import { applyTemuReferralBoost } from "../TemuTicket/temuTicket.service";
 import { REFERRED_TURNOVER_THRESHOLD } from "../ReferralRewardTracker/referralTurnoverReward.constants";
 import { NormalUser } from "../NormalUser/normalUser.model";
 import { User } from "../User/user.model";
@@ -72,6 +73,7 @@ export const trackReferral = async (
 
     if (firstInsert) {
       await ensureReferralTurnoverTracking(referredUserId);
+      await applyTemuReferralBoost(referrerId).catch(() => undefined);
     }
   } catch (err) {
     if (ownSession) await session.abortTransaction();
