@@ -24,6 +24,7 @@ import { GameTxnRecord } from '../GameTxnRecords/models/GameTxnRecord';
 import { GameTxnRecordBackup } from '../GameTxnRecords/models/gameTxnRecordBackup.model';
 import { AutoPaySms } from '../AutoPay/autopaySms.model';
 import { findPromotionByCode } from '../Promotion/promotion.constant';
+import { resolveNormalDepositBonus } from './normalDepositBonus.util';
 import {
   smsMatchesPaymentMethod,
   type AutoPayPaymentMethod,
@@ -565,8 +566,8 @@ export const markDepositSuccess = async (
     }
 
     trx.status = 'success';
-    const bonusAmount = Math.floor(Number(trx.amount) * 0.1);
-    const totalCredited = Number(trx.amount) + bonusAmount;
+    const bonus = resolveNormalDepositBonus(trx.amount, successfulDeposits);
+    const { bonusAmount, totalCredited } = bonus;
     trx.bonusAmount = bonusAmount;
     await trx.save();
 
@@ -632,13 +633,13 @@ export const markDepositSuccess = async (
       appliesToDepositId: trx._id,
       depositAmount: trx.amount,
       bonusAmount,
-      turnoverRequired: totalCredited * 1,
+      turnoverRequired: bonus.turnoverRequired,
       turnoverCompleted: 0,
       eligibleGameTypes: ['all'],
       isCompleted: false,
       isClaimed: false,
-      promoCode: 'NO_PROMO',
-      usageType: 'always',
+      promoCode: bonus.promoCode,
+      usageType: bonus.isTierBonus ? 'once' : 'always',
       maxWithdraw: null,
       isActive: true,
     });
@@ -652,7 +653,8 @@ export const markDepositSuccess = async (
       ...trx.toObject(),
       bonusAmount,
       totalCredited,
-      promotionApplied: 'NO_PROMO',
+      promotionApplied: bonus.promoCode,
+      tierNumber: bonus.tierNumber,
     };
   }
 
@@ -1148,6 +1150,37 @@ const failAutoPayDeposit = async (
   return trx;
 };
 
+const getDepositBonusPreview = async (
+  userId: string,
+  amount: number,
+  promoCode: string,
+) => {
+  const resolvedPromoCode = promoCode?.trim() || 'NO_PROMO';
+
+  if (resolvedPromoCode !== 'NO_PROMO') {
+    return { applicable: false as const };
+  }
+
+  const successfulDeposits = await Transaction.countDocuments({
+    userId: new Types.ObjectId(userId),
+    transactionType: 'deposit',
+    status: 'success',
+  });
+
+  const bonus = resolveNormalDepositBonus(amount, successfulDeposits);
+
+  return {
+    applicable: true as const,
+    bonusAmount: bonus.bonusAmount,
+    bonusRate: bonus.bonusRate,
+    turnoverX: bonus.turnoverX,
+    totalCredited: bonus.totalCredited,
+    tierNumber: bonus.tierNumber,
+    isTierBonus: bonus.isTierBonus,
+    successfulDeposits,
+  };
+};
+
 export const TransactionService = {
   createManualDeposit,
   createManualWithdraw,
@@ -1162,4 +1195,5 @@ export const TransactionService = {
   rejectWithdraw,
   verifyAutoPayDeposit,
   failAutoPayDeposit,
+  getDepositBonusPreview,
 };

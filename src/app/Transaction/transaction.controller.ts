@@ -225,6 +225,34 @@ const getMyTurnover = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getDepositBonusPreview = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.objectId;
+  if (!userId) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'Login required');
+  }
+
+  const amount = Number(req.query.amount);
+  const promoCode =
+    typeof req.query.promoCode === 'string' ? req.query.promoCode : 'NO_PROMO';
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Valid amount is required');
+  }
+
+  const data = await TransactionService.getDepositBonusPreview(
+    userId,
+    amount,
+    promoCode,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Deposit bonus preview fetched successfully',
+    data,
+  });
+});
+
 export const TransactionController = {
   createManualDeposit,
   createManualWithdraw,
@@ -239,4 +267,5 @@ export const TransactionController = {
   verifyAutoPayDeposit,
   failAutoPayDeposit,
   getMyTurnover,
+  getDepositBonusPreview,
 };

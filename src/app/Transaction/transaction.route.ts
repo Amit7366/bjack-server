@@ -30,6 +30,12 @@ router.post(
   TransactionController.failAutoPayDeposit
 );
 
+router.get(
+  '/deposit/bonus-preview',
+  auth(USER_ROLE.user),
+  TransactionController.getDepositBonusPreview
+);
+
 router.post('/withdraw/manual', auth(USER_ROLE.admin, USER_ROLE.superAdmin, USER_ROLE.user), validateRequest(withdrawValidation), TransactionController.createManualWithdraw);
 
 router.patch('/withdraw/approve/:id', auth(USER_ROLE.admin, USER_ROLE.superAdmin), TransactionController.approveWithdraw);
