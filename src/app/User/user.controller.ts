@@ -102,10 +102,25 @@ const changeStatus = catchAsync(async (req, res) => {
     data: result,
   });
 });
+
+const getDeviceRegistrationStatus = catchAsync(async (req, res) => {
+  const { deviceFingerprint } = req.body;
+
+  const result = await UserServices.getDeviceRegistrationStatusIntoDb(deviceFingerprint);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Device registration status retrieved successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   createUser,
   createAdmin,
   getMe,
   changeStatus,
   findByEmail,
+  getDeviceRegistrationStatus,
 };

@@ -62,7 +62,14 @@ const changeStatusValidationSchema = z.object({
   }),
 });
 
+const deviceRegistrationStatusValidationSchema = z.object({
+  body: z.object({
+    deviceFingerprint: z.string().min(1, 'Device verification is required.'),
+  }),
+});
+
 export const UserValidation = {
   userValidationSchema,
   changeStatusValidationSchema,
+  deviceRegistrationStatusValidationSchema,
 };

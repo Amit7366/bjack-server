@@ -28,6 +28,11 @@ router.post(
   validateRequest(createNormalUserValidationSchema),
   UserController.createUser,
 );
+router.post(
+  '/device-registration-status',
+  validateRequest(UserValidation.deviceRegistrationStatusValidationSchema),
+  UserController.getDeviceRegistrationStatus,
+);
 router.get(
   '/find-by-email',
   // auth(

@@ -71,15 +71,13 @@ export const createNormalUserValidationSchema = z.object({
       user: emptyToUndefined.pipe(z.string()).optional(),
       _id: emptyToUndefined.pipe(z.string()).optional(),
     }).superRefine((data, ctx) => {
-      const referredBy = typeof data.referredBy === 'string' ? data.referredBy.trim() : '';
-      const hasReferral = referredBy.length > 0 && referredBy !== 'self';
       const fingerprint =
         typeof data.deviceFingerprint === 'string' ? data.deviceFingerprint.trim() : '';
 
-      if (hasReferral && !fingerprint) {
+      if (!fingerprint) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Device verification is required when registering with a referral code.',
+          message: 'Device verification is required to register.',
           path: ['deviceFingerprint'],
         });
       }

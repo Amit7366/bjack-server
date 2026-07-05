@@ -7,6 +7,17 @@ import { User } from '../User/user.model';
 export const SELF_REFERRAL_DEVICE_MESSAGE =
   'You cannot register with your own referral code on this device. Remove the referral link and try again.';
 
+export const MAX_ACCOUNTS_PER_DEVICE = 3;
+
+export const DEVICE_ACCOUNT_LIMIT_MESSAGE =
+  'This device already has the maximum number of accounts (3).';
+
+export type DeviceRegistrationStatus = {
+  accountCount: number;
+  maxAccounts: number;
+  canRegister: boolean;
+};
+
 type AssertSelfReferralInput = {
   referredBy?: string | null;
   deviceFingerprint?: string | null;
@@ -22,6 +33,59 @@ type RecordUserDeviceInput = {
 function normalizeFingerprint(value?: string | null): string | null {
   const trimmed = typeof value === 'string' ? value.trim() : '';
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function deviceFingerprintFilter(fingerprint: string) {
+  return {
+    $or: [
+      { deviceFingerprint: fingerprint },
+      { knownDeviceFingerprints: fingerprint },
+    ],
+  };
+}
+
+/**
+ * Count all accounts ever linked to this device (including deleted).
+ */
+export async function countAccountsOnDevice(
+  deviceFingerprint?: string | null,
+): Promise<number> {
+  const fingerprint = normalizeFingerprint(deviceFingerprint);
+  if (!fingerprint) return 0;
+
+  return NormalUser.countDocuments(deviceFingerprintFilter(fingerprint));
+}
+
+/**
+ * Reject signup when this device already has the maximum allowed accounts.
+ */
+export async function assertDeviceAccountLimit(
+  deviceFingerprint?: string | null,
+): Promise<void> {
+  const fingerprint = normalizeFingerprint(deviceFingerprint);
+  if (!fingerprint) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'Device verification is required to register.',
+    );
+  }
+
+  const accountCount = await countAccountsOnDevice(fingerprint);
+  if (accountCount >= MAX_ACCOUNTS_PER_DEVICE) {
+    throw new AppError(httpStatus.CONFLICT, DEVICE_ACCOUNT_LIMIT_MESSAGE);
+  }
+}
+
+export async function getDeviceRegistrationStatus(
+  deviceFingerprint?: string | null,
+): Promise<DeviceRegistrationStatus> {
+  const accountCount = await countAccountsOnDevice(deviceFingerprint);
+
+  return {
+    accountCount,
+    maxAccounts: MAX_ACCOUNTS_PER_DEVICE,
+    canRegister: accountCount < MAX_ACCOUNTS_PER_DEVICE,
+  };
 }
 
 /**

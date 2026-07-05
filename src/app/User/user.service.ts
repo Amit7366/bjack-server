@@ -19,7 +19,10 @@ import { TNormalUser } from '../NormalUser/normalUser.interface';
 import { UserBalance } from '../Transaction/userBalance.model';
 import { trackReferral } from '../Referral/referral.service';
 import {
+  assertDeviceAccountLimit,
   assertNotSelfReferralOnDevice,
+  DEVICE_ACCOUNT_LIMIT_MESSAGE,
+  getDeviceRegistrationStatus,
   recordUserDevice,
   SELF_REFERRAL_DEVICE_MESSAGE,
 } from '../Referral/referralDeviceGuard';
@@ -48,6 +51,15 @@ export const createUserIntoDb = async (
     const session = await mongoose.startSession(); // start a fresh session per attempt
     try {
       await session.withTransaction(async () => {
+        if (!payload.deviceFingerprint?.trim()) {
+          throw new AppError(
+            httpStatus.BAD_REQUEST,
+            'Device verification is required to register.',
+          );
+        }
+
+        await assertDeviceAccountLimit(payload.deviceFingerprint);
+
         userData.id = await generateid(session); // use same session
 
         userData.referralId = userData.id;
@@ -146,7 +158,11 @@ export const createUserIntoDb = async (
         if (err.keyPattern?.email) throw new AppError(httpStatus.CONFLICT, 'Email already exists');
       }
 
-      if (err?.message?.includes('device') || err?.message === SELF_REFERRAL_DEVICE_MESSAGE) {
+      if (
+        err?.message?.includes('device') ||
+        err?.message === SELF_REFERRAL_DEVICE_MESSAGE ||
+        err?.message === DEVICE_ACCOUNT_LIMIT_MESSAGE
+      ) {
         throw new AppError(httpStatus.CONFLICT, err.message);
       }
 
@@ -257,10 +273,16 @@ const changeStatus = async (id: string, payload: { status: string }) => {
   });
   return result;
 };
+
+const getDeviceRegistrationStatusIntoDb = async (deviceFingerprint: string) => {
+  return getDeviceRegistrationStatus(deviceFingerprint);
+};
+
 export const UserServices = {
   createUserIntoDb,
   createAdminIntoDB,
   getMe,
   changeStatus,
   findByEmailIntoDb,
+  getDeviceRegistrationStatusIntoDb,
 };
