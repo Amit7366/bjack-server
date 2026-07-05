@@ -53,6 +53,12 @@ const advertiserSchema = new Schema<TAdvertiser, AdvertiserModel>(
       },
       required: [true, 'Partner type is required'],
     },
+    commissionRate: {
+      type: Number,
+      default: null,
+      min: 0,
+      max: 1,
+    },
     isDeleted: {
       type: Boolean,
       default: false,

@@ -19,6 +19,7 @@ import { LoginBonusTracking } from '../User/loginBonusTracking.model';
 import { ReferralRewardModel } from '../ReferralRewardTracker/referralReward.model';
 import { ReferralModel } from '../Referral/referral.model';
 import { assertAccountActiveForRestrictedAction } from '../User/userAccountStatus.util';
+import { PartnerCommissionService } from '../PartnerCommission/partnerCommission.service';
 import { Types } from 'mongoose';
 import { GameTxnRecord } from '../GameTxnRecords/models/GameTxnRecord';
 import { GameTxnRecordBackup } from '../GameTxnRecords/models/gameTxnRecordBackup.model';
@@ -383,6 +384,14 @@ const markWithdrawSuccess = async (trxId: string) => {
     { new: true }
   );
 
+  try {
+    await PartnerCommissionService.applyWithdrawCommission(
+      trx as ITransaction & { _id: Types.ObjectId },
+    );
+  } catch (err) {
+    console.error('Partner withdraw commission failed:', err);
+  }
+
   // 4) (Removed socket emit) – no balance:update event
 
   // 5) Return updated transaction record
@@ -649,6 +658,14 @@ export const markDepositSuccess = async (
     await User.findByIdAndUpdate(trx.userId, { userLevel: newLevel });
     await NormalUser.findOneAndUpdate({ user: trx.userId }, { userLevel: newLevel });
 
+    try {
+      await PartnerCommissionService.applyDepositCommission(
+        trx as ITransaction & { _id: Types.ObjectId },
+      );
+    } catch (err) {
+      console.error('Partner deposit commission failed:', err);
+    }
+
     return {
       ...trx.toObject(),
       bonusAmount,
@@ -842,6 +859,14 @@ export const markDepositSuccess = async (
   const newLevel = determineUserLevel(totalDeposit);
   await User.findByIdAndUpdate(trx.userId, { userLevel: newLevel });
   await NormalUser.findOneAndUpdate({ user: trx.userId }, { userLevel: newLevel });
+
+  try {
+    await PartnerCommissionService.applyDepositCommission(
+      trx as ITransaction & { _id: Types.ObjectId },
+    );
+  } catch (err) {
+    console.error('Partner deposit commission failed:', err);
+  }
 
   return {
     ...trx.toObject(),

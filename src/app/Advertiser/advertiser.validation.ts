@@ -33,6 +33,7 @@ export const updateAdvertiserValidationSchema = z.object({
       email: z.string().email().optional(),
       contactNo: z.string().min(1).optional(),
       partnerType: z.enum([...PartnerType] as [string, ...string[]]).optional(),
+      commissionRate: z.number().min(0).max(1).nullable().optional(),
       status: z.enum(['active', 'frozen', 'deactivated', 'pending']).optional(),
     }),
   }),

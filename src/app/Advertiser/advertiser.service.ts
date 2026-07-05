@@ -10,6 +10,8 @@ import { AdminServices } from '../Admin/admin.service';
 import { AdvertiserSearchableFields } from './advertiser.constant';
 import { TAdvertiser } from './advertiser.interface';
 import { Advertiser } from './advertiser.model';
+import { PartnerCommissionService } from '../PartnerCommission/partnerCommission.service';
+import { PartnerBalance } from '../PartnerCommission/partnerBalance.model';
 
 const getAllAdvertisersFromDB = async (query: Record<string, unknown>) => {
   const advertiserQuery = new QueryBuilder(
@@ -20,7 +22,7 @@ const getAllAdvertisersFromDB = async (query: Record<string, unknown>) => {
         options: { strictPopulate: false },
       })
       .select(
-        '_id id user name userName email contactNo partnerType isDeleted createdAt updatedAt',
+        '_id id user name userName email contactNo partnerType commissionRate isDeleted createdAt updatedAt',
       ),
     query,
   )
@@ -32,7 +34,43 @@ const getAllAdvertisersFromDB = async (query: Record<string, unknown>) => {
 
   const result = await advertiserQuery.modelQuery;
   const meta = await advertiserQuery.countTotal();
-  return { result, meta };
+
+  const userIds = result.map((r) => {
+    const doc = r as { user?: { _id?: unknown } | unknown };
+    const user = doc.user;
+    if (user && typeof user === 'object' && '_id' in user) {
+      return String((user as { _id: unknown })._id);
+    }
+    return String(user ?? '');
+  }).filter(Boolean);
+
+  const balances = userIds.length
+    ? await PartnerBalance.find({ userId: { $in: userIds } }).lean()
+    : [];
+  const balanceByUserId = new Map(
+    balances.map((b) => [String(b.userId), b]),
+  );
+
+  const enriched = result.map((r) => {
+    const doc = r.toObject ? r.toObject() : r;
+    const userId =
+      doc.user && typeof doc.user === 'object' && '_id' in doc.user
+        ? String(doc.user._id)
+        : String(doc.user ?? '');
+    const wallet = balanceByUserId.get(userId);
+    return {
+      ...doc,
+      wallet: wallet
+        ? {
+            currentBalance: wallet.currentBalance,
+            totalEarned: wallet.totalEarned,
+            totalWithdrawn: wallet.totalWithdrawn,
+          }
+        : { currentBalance: 0, totalEarned: 0, totalWithdrawn: 0 },
+    };
+  });
+
+  return { result: enriched, meta };
 };
 
 const getSingleAdvertiserFromDB = async (id: string) => {
@@ -83,6 +121,12 @@ const createAdvertiserIntoDB = async (
     if (!newAdvertiser.length) {
       throw new AppError(httpStatus.BAD_REQUEST, 'Failed to create partner profile');
     }
+
+    await PartnerCommissionService.initPartnerBalanceOnCreate(
+      newUser[0]._id,
+      newUser[0].id,
+      session,
+    );
 
     await session.commitTransaction();
     await session.endSession();

@@ -26,6 +26,7 @@ import { TurnoverActivity } from '../Turnover/turnover.model';
 import { BetTransaction } from '../Transaction/betTransaction.model';
 import { getMyReferralSummary } from '../Referral/referral.service';
 import { ReferralModel } from '../Referral/referral.model';
+import { PartnerCommissionService } from '../PartnerCommission/partnerCommission.service';
 import { TransactionService } from '../Transaction/transaction.service';
 import { UserWallet } from '../UserWallet/userWallet.model';
 
@@ -849,6 +850,7 @@ const getAdvertiserDashboardOverviewFromDB = async (
 ) => {
   const { fromDate, toDate } = parseDashboardDateRange(from, to);
   const summary = await getMyReferralSummary(userId);
+  const wallet = await PartnerCommissionService.getPartnerWallet(userId);
   const referrerObjectId = new Types.ObjectId(userId);
 
   const [newInPeriod, referredIds] = await Promise.all([
@@ -890,6 +892,13 @@ const getAdvertiserDashboardOverviewFromDB = async (
     pendingRewards: summary.totalRewards,
     downlineTurnover: summary.downlineTurnover,
     referredUsers: summary.referredUsers.slice(0, 10),
+    wallet: {
+      currentBalance: wallet.currentBalance,
+      totalEarned: wallet.totalEarned,
+      totalDeducted: wallet.totalDeducted,
+      totalWithdrawn: wallet.totalWithdrawn,
+      commissionRate: wallet.commissionRate,
+    },
   };
 };
 

@@ -16,6 +16,7 @@ export type TAdvertiser = {
   email: string;
   contactNo: string;
   partnerType: TPartnerType;
+  commissionRate?: number | null;
   isDeleted: boolean;
 };
 
