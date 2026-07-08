@@ -26,9 +26,9 @@ const EXCLUSIVE_CAROUSEL_REFS: Array<{
   { gameId: 'aviator', gameCode: 'a04d1f3eb8ccec8a4823bdf18e3f0e84', game_type: 'crash' },
   { gameId: 'superAcePlus', gameCode: '80aad2a10ae6a95068b50160d6c78897' },
   { gameId: 'treasuresAztec', gameCode: '2fa9a84d096d6ff0bab53f81b79876c8' },
-  { gameId: 'fortuneGems', gameCode: '63927e939636f45e9d6d0b3717b3b1c1' },
-  { gameId: 'fortuneGaruda', gameCode: 'aa609892f551de2053e92427dc4ae17f' },
-  { gameId: 'fortuneRabbit', gameCode: 'e175cdd3215a02f5539cc8354a149b75' },
+  { gameId: 'anubisWrath', gameCode: 'c268154a85669eea35aa46387834ac76' },
+  { gameId: 'wildBountyShowdown', gameCode: 'c98bb64436826fe9a2c62955ff70cba9' },
+  { gameId: 'superAce', gameCode: 'bdfb23c974a2517198c5443adeea77a8' },
   { gameId: 'bjMoneyWheel', gameCode: '6e19e03c50f035ddd9ffd804c30f8c80', game_type: 'live' },
   { gameId: 'boxingKing', gameCode: '981f5f9675002fbeaaf24c4128b938d7' },
 ];
