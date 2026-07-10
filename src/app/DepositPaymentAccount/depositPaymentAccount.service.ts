@@ -27,6 +27,17 @@ const getEnabledAccountsForDeposit = async () => {
     .lean();
 };
 
+const clearRecommendedForMethod = async (
+  paymentMethod: TPaymentMethod,
+  exceptId?: string,
+) => {
+  const filter: Record<string, unknown> = { paymentMethod, recommended: true };
+  if (exceptId) {
+    filter._id = { $ne: exceptId };
+  }
+  await DepositPaymentAccount.updateMany(filter, { $set: { recommended: false } });
+};
+
 const createAccountIntoDB = async (payload: Partial<TDepositPaymentAccount>) => {
   const channelId = normalizeChannelId(payload.channelId ?? '');
   if (!channelId) {
@@ -39,6 +50,10 @@ const createAccountIntoDB = async (payload: Partial<TDepositPaymentAccount>) => 
   });
   if (exists) {
     throw new AppError(httpStatus.CONFLICT, 'Account for this method and channel already exists');
+  }
+
+  if (payload.recommended && payload.paymentMethod) {
+    await clearRecommendedForMethod(payload.paymentMethod);
   }
 
   const created = await DepositPaymentAccount.create({
@@ -79,6 +94,11 @@ const updateAccountIntoDB = async (id: string, payload: Partial<TDepositPaymentA
 
   delete patch.isActive;
 
+  const method = patch.paymentMethod ?? existing.paymentMethod;
+  if (patch.recommended === true) {
+    await clearRecommendedForMethod(method, id);
+  }
+
   const updated = await DepositPaymentAccount.findByIdAndUpdate(id, patch, {
     new: true,
     runValidators: true,
@@ -96,11 +116,6 @@ const activateAccountIntoDB = async (id: string) => {
   if (!account.isEnabled) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Enable this account before activating it');
   }
-
-  await DepositPaymentAccount.updateMany(
-    { paymentMethod: account.paymentMethod, _id: { $ne: id } },
-    { $set: { isActive: false } },
-  );
 
   account.isActive = true;
   await account.save();

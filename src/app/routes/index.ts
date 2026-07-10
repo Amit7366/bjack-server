@@ -36,6 +36,7 @@ import { AdvertiserRoutes } from '../Advertiser/advertiser.route';
 import { RescueFundRoutes } from '../RescueFund/rescueFund.route';
 import { TemuTicketRoutes } from '../TemuTicket/temuTicket.route';
 import { MissionRoutes } from '../Mission/mission.route';
+import { PasswordResetRequestRoutes } from '../PasswordResetRequest/passwordResetRequest.route';
 
 const router = Router();
 
@@ -77,6 +78,7 @@ const moduleRoutes = [
   { path: '/rescue-fund', route: RescueFundRoutes },
   { path: '/temu-ticket', route: TemuTicketRoutes },
   { path: '/missions', route: MissionRoutes },
+  { path: '/password-reset-requests', route: PasswordResetRequestRoutes },
 ];
 
 moduleRoutes.forEach((r) => router.use(r.path, r.route));
