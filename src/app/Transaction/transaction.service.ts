@@ -423,7 +423,7 @@ const markCoinWithdrawSuccess = async (userId: string, coinAmount: number) => {
   return updated;
 };
 
-// 🔹 Helper: make all previous (open) turnovers inert
+// 🔹 Helper: make all previous (open) turnovers inert — only latest deposit counts
 const resetOldTurnovers = async (userId: typeof Transaction.prototype.userId) => {
   await TurnoverTracking.updateMany(
     {
@@ -435,6 +435,8 @@ const resetOldTurnovers = async (userId: typeof Transaction.prototype.userId) =>
       $set: {
         turnoverRequired: 0,
         isCompleted: true,
+        isActive: false,
+        countingWindowClosedAt: new Date(),
         eligibleGameTypes: ['none'],
         maxWithdraw: null,
       },
@@ -635,6 +637,8 @@ export const markDepositSuccess = async (
       { upsert: true, new: true }
     );
 
+
+    await resetOldTurnovers(trx.userId);
 
     await TurnoverTracking.create({
       userId: trx.userId,
