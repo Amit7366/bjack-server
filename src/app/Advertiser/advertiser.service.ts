@@ -12,6 +12,8 @@ import { TAdvertiser } from './advertiser.interface';
 import { Advertiser } from './advertiser.model';
 import { PartnerCommissionService } from '../PartnerCommission/partnerCommission.service';
 import { PartnerBalance } from '../PartnerCommission/partnerBalance.model';
+import { getPartnerReferredUsersPage } from '../Referral/referral.service';
+import type { PartnerReferredUsersQuery } from '../Referral/referral.service';
 
 const getAllAdvertisersFromDB = async (query: Record<string, unknown>) => {
   const advertiserQuery = new QueryBuilder(
@@ -236,6 +238,13 @@ const getAdvertiserDashboardOverviewFromDB = async (
   return AdminServices.getAdvertiserDashboardOverviewFromDB(userId, from, to);
 };
 
+const getMyReferredUsersFromDB = async (
+  userId: string,
+  query: PartnerReferredUsersQuery,
+) => {
+  return getPartnerReferredUsersPage(userId, query);
+};
+
 export const AdvertiserServices = {
   getAllAdvertisersFromDB,
   getSingleAdvertiserFromDB,
@@ -243,4 +252,5 @@ export const AdvertiserServices = {
   updateAdvertiserIntoDB,
   deleteAdvertiserFromDB,
   getAdvertiserDashboardOverviewFromDB,
+  getMyReferredUsersFromDB,
 };

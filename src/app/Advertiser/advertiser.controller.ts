@@ -86,6 +86,34 @@ const getAdvertiserDashboardOverview = catchAsync(async (req, res) => {
   });
 });
 
+const getMyReferredUsers = catchAsync(async (req, res) => {
+  const userId = String(req.user?.objectId ?? '').trim();
+  if (!userId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'User id is required');
+  }
+
+  const result = await AdvertiserServices.getMyReferredUsersFromDB(userId, {
+    page: req.query.page ? Number(req.query.page) : undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+    search: req.query.search as string | undefined,
+    status: req.query.status as string | undefined,
+    ftd: req.query.ftd as string | undefined,
+    from: req.query.from as string | undefined,
+    to: req.query.to as string | undefined,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Referred users fetched successfully',
+    meta: result.meta,
+    data: {
+      summary: result.summary,
+      rows: result.rows,
+    },
+  });
+});
+
 export const AdvertiserControllers = {
   getAllAdvertisers,
   getSingleAdvertiser,
@@ -93,4 +121,5 @@ export const AdvertiserControllers = {
   updateAdvertiser,
   deleteAdvertiser,
   getAdvertiserDashboardOverview,
+  getMyReferredUsers,
 };

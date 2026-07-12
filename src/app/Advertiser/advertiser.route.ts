@@ -25,6 +25,12 @@ router.get(
   AdvertiserControllers.getAdvertiserDashboardOverview,
 );
 
+router.get(
+  '/me/referred-users',
+  advertiserAuth,
+  AdvertiserControllers.getMyReferredUsers,
+);
+
 router.get('/me/wallet', advertiserAuth, PartnerCommissionControllers.getMyWallet);
 router.get(
   '/me/commission-ledger',
