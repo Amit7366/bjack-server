@@ -24,8 +24,11 @@ import { GameTxnRecord } from '../GameTxnRecords/models/GameTxnRecord';
 import { Transaction } from '../Transaction/transaction.model';
 import { TurnoverActivity } from '../Turnover/turnover.model';
 import { BetTransaction } from '../Transaction/betTransaction.model';
-import { getMyReferralSummary } from '../Referral/referral.service';
-import { ReferralModel } from '../Referral/referral.model';
+import {
+  getMyReferralSummary,
+  referredByMatchFilter,
+  resolveReferredUserIds,
+} from '../Referral/referral.service';
 import { PartnerCommissionService } from '../PartnerCommission/partnerCommission.service';
 import { TransactionService } from '../Transaction/transaction.service';
 import { UserWallet } from '../UserWallet/userWallet.model';
@@ -851,17 +854,22 @@ const getAdvertiserDashboardOverviewFromDB = async (
   const { fromDate, toDate } = parseDashboardDateRange(from, to);
   const summary = await getMyReferralSummary(userId);
   const wallet = await PartnerCommissionService.getPartnerWallet(userId);
-  const referrerObjectId = new Types.ObjectId(userId);
 
-  const [newInPeriod, referredIds] = await Promise.all([
-    ReferralModel.countDocuments({
-      referrer: referrerObjectId,
-      referredAt: { $gte: fromDate, $lte: toDate },
-    }),
-    ReferralModel.find({ referrer: referrerObjectId }).select('referredUser').lean(),
-  ]);
+  // Prefer referredBy + Referral merge so advertisers with legacy referredBy data count correctly
+  const resolved = await resolveReferredUserIds(userId, summary.referralId);
+  const ids = resolved.map((r) => r.userId);
+  const newInPeriod = resolved.filter(
+    (r) => r.referredAt >= fromDate && r.referredAt <= toDate,
+  ).length;
 
-  const ids = referredIds.map((r) => r.referredUser);
+  // Also count NormalUser createdAt in range when referredAt came from missing Referral rows
+  const referredByNewInPeriod = summary.referralId
+    ? await NormalUser.countDocuments({
+        ...referredByMatchFilter(summary.referralId),
+        createdAt: { $gte: fromDate, $lte: toDate },
+      })
+    : 0;
+
   let activeReferred = 0;
   let ftdCount = 0;
 
@@ -885,7 +893,7 @@ const getAdvertiserDashboardOverviewFromDB = async (
     },
     referralId: summary.referralId,
     inviteCount: summary.inviteCount,
-    newInPeriod,
+    newInPeriod: Math.max(newInPeriod, referredByNewInPeriod),
     activeReferred,
     ftdCount,
     earnedReward: summary.earnedReward,

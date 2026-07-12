@@ -104,24 +104,104 @@ export type MyReferralSummary = {
   referredUsers: ReferredUserRow[];
 };
 
+/** Exact, case-insensitive match for referral codes like AD-0007 */
+export const referredByMatchFilter = (referralId: string) => {
+  const escaped = referralId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return { referredBy: { $regex: new RegExp(`^${escaped}$`, "i") } };
+};
+
+/**
+ * Resolve referred member userIds for a referrer.
+ * Merges Referral collection pairs with NormalUser/User.referredBy === referralId
+ * so advertisers (and legacy data) still show when Referral rows are missing.
+ */
+export const resolveReferredUserIds = async (
+  referrerUserId: string,
+  referralId?: string | null,
+): Promise<{ userId: Types.ObjectId; referredAt: Date }[]> => {
+  const referrerObjectId = new Types.ObjectId(referrerUserId);
+
+  let code = referralId?.trim() || null;
+  if (!code) {
+    const referrer = await User.findById(referrerObjectId).select("referralId").lean();
+    code = referrer?.referralId?.trim() || null;
+  }
+
+  const [referrals, byNormalUser, byUser] = await Promise.all([
+    ReferralModel.find({ referrer: referrerObjectId })
+      .select("referredUser referredAt")
+      .lean(),
+    code
+      ? NormalUser.find(referredByMatchFilter(code))
+          .select("user createdAt")
+          .lean()
+      : Promise.resolve([]),
+    code
+      ? User.find({
+          ...referredByMatchFilter(code),
+          _id: { $ne: referrerObjectId },
+        })
+          .select("_id createdAt")
+          .lean()
+      : Promise.resolve([]),
+  ]);
+
+  const byId = new Map<string, Date>();
+
+  for (const r of referrals) {
+    const id = String(r.referredUser);
+    byId.set(id, r.referredAt ? new Date(r.referredAt) : new Date());
+  }
+
+  for (const nu of byNormalUser) {
+    const id = String(nu.user);
+    if (!byId.has(id)) {
+      const createdAt =
+        (nu as { createdAt?: Date }).createdAt ?? new Date();
+      byId.set(id, new Date(createdAt));
+    }
+  }
+
+  for (const u of byUser) {
+    const id = String(u._id);
+    if (!byId.has(id)) {
+      const createdAt =
+        (u as { createdAt?: Date }).createdAt ?? new Date();
+      byId.set(id, new Date(createdAt));
+    }
+  }
+
+  return [...byId.entries()]
+    .map(([id, referredAt]) => ({
+      userId: new Types.ObjectId(id),
+      referredAt,
+    }))
+    .sort((a, b) => b.referredAt.getTime() - a.referredAt.getTime());
+};
+
 export const getMyReferredUsers = async (userId: string): Promise<ReferredUserRow[]> => {
   if (!Types.ObjectId.isValid(userId)) {
     throw new AppError(httpStatus.BAD_REQUEST, "Invalid user id");
   }
 
   const referrerObjectId = new Types.ObjectId(userId);
+  const [resolved, referrerUser] = await Promise.all([
+    resolveReferredUserIds(userId),
+    User.findById(referrerObjectId).select("role").lean(),
+  ]);
 
-  const referrals = await ReferralModel.find({ referrer: referrerObjectId })
-    .sort({ referredAt: -1 })
-    .lean();
+  if (!resolved.length) return [];
 
-  if (!referrals.length) return [];
-
-  const referredIds = referrals.map((r) => r.referredUser);
+  const referredIds = resolved.map((r) => r.userId);
   const referredIdStrings = referredIds.map((id) => String(id));
 
-  await Promise.all(referredIdStrings.map((id) => ensureReferralTurnoverTracking(id)));
-  await payReferralTurnoverRewards(referredIdStrings);
+  // Member referral TK payouts need UserBalance. Advertisers use partner commission —
+  // never run payout side-effects on their dashboard read path.
+  const isAdvertiser = referrerUser?.role === "advertiser";
+  if (!isAdvertiser) {
+    await Promise.all(referredIdStrings.map((id) => ensureReferralTurnoverTracking(id)));
+    await payReferralTurnoverRewards(referredIdStrings).catch(() => undefined);
+  }
 
   const [users, balances, normalUsers, turnoverTrackers] = await Promise.all([
     User.find({ _id: { $in: referredIds } }).select("userName id").lean(),
@@ -161,14 +241,14 @@ export const getMyReferredUsers = async (userId: string): Promise<ReferredUserRo
     ])
   );
 
-  return referrals.map((r) => {
-    const referredUserId = String(r.referredUser);
+  return resolved.map((r) => {
+    const referredUserId = String(r.userId);
     const turnover = turnoverByReferredId.get(referredUserId);
     return {
       userId: referredUserId,
       username: usernameByUserId.get(referredUserId) ?? "—",
       totalDeposit: depositByUserId.get(referredUserId) ?? 0,
-      referredAt: (r.referredAt ?? new Date()).toISOString(),
+      referredAt: r.referredAt.toISOString(),
       turnoverCompleted: turnover?.turnoverCompleted ?? 0,
       turnoverRequired: turnover?.turnoverRequired ?? REFERRED_TURNOVER_THRESHOLD,
       rewardPaid: turnover?.rewardPaid ?? false,
@@ -208,10 +288,19 @@ export const getMyReferralSummary = async (userId: string): Promise<MyReferralSu
   }
 
   const bonus = bonusAgg[0];
-  const inviteCount =
-    reward?.totalReferred ?? normalUser?.refferCount ?? user?.refferCount ?? 0;
+  // Use Math.max — `??` would keep totalReferred: 0 and hide real referredBy counts
+  const inviteCount = Math.max(
+    Number(reward?.totalReferred ?? 0),
+    Number(normalUser?.refferCount ?? 0),
+    Number(user?.refferCount ?? 0),
+    referredUsers.length,
+  );
   const pendingRewards = reward?.totalPendingTK ?? 0;
-  const activeDownline = normalUser?.refferCount ?? user?.refferCount ?? inviteCount;
+  const activeDownline = Math.max(
+    Number(normalUser?.refferCount ?? 0),
+    Number(user?.refferCount ?? 0),
+    inviteCount,
+  );
 
   return {
     referralId,

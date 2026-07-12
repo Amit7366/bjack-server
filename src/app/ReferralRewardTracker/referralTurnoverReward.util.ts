@@ -121,6 +121,8 @@ export async function creditReferrerTurnoverReward(
       { session }
     );
 
+    // Member referrers have UserBalance; advertisers use PartnerBalance and
+    // earn commission separately — skip TK wallet credit without failing the request.
     const updatedBalance = await UserBalance.findOneAndUpdate(
       { userId: tracker.userId },
       {
@@ -133,7 +135,8 @@ export async function creditReferrerTurnoverReward(
     );
 
     if (!updatedBalance) {
-      throw new Error('Referrer balance not found');
+      await session.abortTransaction();
+      return false;
     }
 
     await ReferralRewardModel.updateOne(

@@ -80,10 +80,19 @@ export const createUserIntoDb = async (
             deviceFingerprint: payload.deviceFingerprint,
           });
 
-          const referrer = await User.findOne({ referralId: payload.referredBy }).session(session);
+          const referrer = await User.findOne({
+            referralId: {
+              $regex: new RegExp(
+                `^${payload.referredBy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+                'i',
+              ),
+            },
+          }).session(session);
           if (referrer) {
             await User.updateOne({ _id: referrer._id }, { $inc: { refferCount: 1 } }, { session });
             await NormalUser.updateOne({ user: referrer._id }, { $inc: { refferCount: 1 } }, { session });
+            // Store canonical referral code from referrer so referredBy always matches User.referralId
+            payload.referredBy = referrer.referralId ?? payload.referredBy;
             referrerUserId = referrer._id.toString();
           } else {
             payload.referredBy = 'self';
