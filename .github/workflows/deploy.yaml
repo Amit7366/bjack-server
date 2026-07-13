@@ -24,7 +24,7 @@ jobs:
           script: |
             set -euo pipefail
             export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-            DEPLOY_DIR="/home/ubuntu/bkbaji-server"
+            DEPLOY_DIR="/root/bkbaji-server"
             DOMAIN="bkbajiapi.xyz"
             REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
 
