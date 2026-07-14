@@ -269,6 +269,26 @@ export const createManualDeposit = async (data: Partial<ITransaction>) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'Missing required fields');
   }
 
+  const normalizedTransactionId = String(transactionId).trim().toUpperCase();
+  if (!normalizedTransactionId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Transaction ID is required');
+  }
+
+  const existingWithTxnId = await Transaction.findOne({
+    transactionType: 'deposit',
+    transactionId: {
+      $regex: `^${normalizedTransactionId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+      $options: 'i',
+    },
+  }).select('_id').lean();
+
+  if (existingWithTxnId) {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      'This transaction ID has already been submitted',
+    );
+  }
+
   const resolvedPromoCode = promoCode?.trim() || 'NO_PROMO';
   const promoConfig = findPromotionByCode(resolvedPromoCode);
   if (!promoConfig) {
@@ -349,7 +369,7 @@ export const createManualDeposit = async (data: Partial<ITransaction>) => {
     amount: finalAmount, // now equals only deposit amount
     paymentMethod,
     transactionType: 'deposit',
-    transactionId,
+    transactionId: normalizedTransactionId,
     status: 'pending',
     invoiceId: uuidv4(),
     promoCode: resolvedPromoCode,
