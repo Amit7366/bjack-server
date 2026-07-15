@@ -77,8 +77,12 @@ jobs:
               sudo apt-get install -y -qq nginx certbot python3-certbot-nginx
             fi
 
-            if [ -f "deploy/nginx/${DOMAIN}.conf" ]; then
+            if [ -d "/etc/letsencrypt/live/${DOMAIN}" ] && [ -f "deploy/nginx/${DOMAIN}.ssl.conf" ]; then
+              sudo cp "deploy/nginx/${DOMAIN}.ssl.conf" "/etc/nginx/sites-available/${DOMAIN}"
+            elif [ -f "deploy/nginx/${DOMAIN}.conf" ]; then
               sudo cp "deploy/nginx/${DOMAIN}.conf" "/etc/nginx/sites-available/${DOMAIN}"
+            fi
+            if [ -f "/etc/nginx/sites-available/${DOMAIN}" ]; then
               sudo ln -sf "/etc/nginx/sites-available/${DOMAIN}" "/etc/nginx/sites-enabled/${DOMAIN}"
               sudo rm -f /etc/nginx/sites-enabled/default
             fi
@@ -113,6 +117,12 @@ jobs:
                 --register-unsafely-without-email || echo "WARN: certbot failed — point DNS A record to this host first"
             else
               sudo certbot renew --quiet || true
+            fi
+
+            # Re-apply SSL nginx template with WebSocket headers (certbot may rewrite sites)
+            if [ -d "/etc/letsencrypt/live/${DOMAIN}" ] && [ -f "deploy/nginx/${DOMAIN}.ssl.conf" ]; then
+              sudo cp "deploy/nginx/${DOMAIN}.ssl.conf" "/etc/nginx/sites-available/${DOMAIN}"
+              sudo ln -sf "/etc/nginx/sites-available/${DOMAIN}" "/etc/nginx/sites-enabled/${DOMAIN}"
             fi
 
             sudo nginx -t

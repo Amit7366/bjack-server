@@ -34,4 +34,10 @@ if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
   certbot --nginx -d "${DOMAIN}" --non-interactive --agree-tos -m "admin@${DOMAIN}" || true
 fi
 
+# Prefer SSL template with WebSocket upgrade headers once certs exist
+if [ -d "/etc/letsencrypt/live/${DOMAIN}" ] && [ -f "${DEPLOY_DIR}/deploy/nginx/${DOMAIN}.ssl.conf" ]; then
+  cp "${DEPLOY_DIR}/deploy/nginx/${DOMAIN}.ssl.conf" "/etc/nginx/sites-available/${DOMAIN}"
+  nginx -t && systemctl reload nginx
+fi
+
 echo "EC2 setup done. Add GitHub secrets VPS_HOST, VPS_USERNAME, VPS_KEY and push to main."

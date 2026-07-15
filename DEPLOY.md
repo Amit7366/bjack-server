@@ -45,9 +45,27 @@ curl https://bkbajiapi.xyz/
 # → 🔥 App is Running
 ```
 
-## Client
+## Client / Admin (Socket.IO)
 
-Point the frontend at the API:
+Frontends must bake the API host into the browser bundle at **Docker build** time:
+
+```yaml
+# client + admin-frontend docker-compose.yml
+build:
+  args:
+    NEXT_PUBLIC_SOCKET_URL: https://bkbajiapi.xyz
+environment:
+  API_URL: https://bkbajiapi.xyz
+  NEXT_PUBLIC_SOCKET_URL: https://bkbajiapi.xyz
+```
+
+Nginx on this API host must proxy WebSocket upgrades (`Upgrade` / `Connection`) — see `deploy/nginx/bkbajiapi.xyz.ssl.conf`.
+
+After deploy, browser DevTools → Network → WS should show:
+
+`wss://bkbajiapi.xyz/socket.io/...` (status 101), **not** `ws://localhost:8000`.
+
+## Client REST proxy
 
 ```env
 API_URL=https://bkbajiapi.xyz
