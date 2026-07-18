@@ -15,7 +15,7 @@ export const PromotionService = {
       return await UserPromotion.create({
         userId,
         selectedPromoCode: 'NO_PROMO',
-        bonusRate: 0.1,
+        bonusRate: 0.05,
         turnoverX: 1,
         eligibleGames: ['all'],
         maxWithdrawLimit: null,

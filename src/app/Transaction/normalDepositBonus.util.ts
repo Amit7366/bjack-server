@@ -40,7 +40,7 @@ export function resolveNormalDepositBonus(
     };
   }
 
-  const bonusAmount = Math.floor(depositAmt * 0.1);
+  const bonusAmount = Math.floor(depositAmt * 0.05);
   const totalCredited = depositAmt + bonusAmount;
   return {
     bonusAmount,
@@ -50,6 +50,6 @@ export function resolveNormalDepositBonus(
     promoCode: 'NO_PROMO',
     isTierBonus: false,
     tierNumber: null,
-    bonusRate: 0.1,
+    bonusRate: 0.05,
   };
 }
