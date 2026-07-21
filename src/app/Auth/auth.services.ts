@@ -53,6 +53,11 @@ export const loginUser = async (payload: TLoginUser) => {
     throw new AppError(httpStatus.FORBIDDEN, 'This user is blocked!');
   }
 
+  // Partners (advertisers) cannot log in unless fully active
+  if (user.role === 'advertiser' && user.status !== 'active') {
+    throw new AppError(httpStatus.FORBIDDEN, 'Partner account is paused');
+  }
+
   // password must be present because we selected it above
   const isPasswordMatched = await User.isPasswordMatched(password, user.password);
   if (!isPasswordMatched) {
@@ -262,6 +267,10 @@ const refreshToken = async (token: string) => {
     // Checking if the user is blocked
     if (user.status === 'deactivated') {
       throw new AppError(httpStatus.FORBIDDEN, 'User is blocked');
+    }
+
+    if (user.role === 'advertiser' && user.status !== 'active') {
+      throw new AppError(httpStatus.FORBIDDEN, 'Partner account is paused');
     }
 
     // Creating a new access token

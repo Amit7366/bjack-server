@@ -114,6 +114,30 @@ const getMyReferredUsers = catchAsync(async (req, res) => {
   });
 });
 
+const getAdvertiserReferredUsers = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await AdvertiserServices.getAdvertiserReferredUsersFromDB(id, {
+    page: req.query.page ? Number(req.query.page) : undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+    search: req.query.search as string | undefined,
+    status: req.query.status as string | undefined,
+    ftd: req.query.ftd as string | undefined,
+    from: req.query.from as string | undefined,
+    to: req.query.to as string | undefined,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Partner referred users fetched successfully',
+    meta: result.meta,
+    data: {
+      summary: result.summary,
+      rows: result.rows,
+    },
+  });
+});
+
 export const AdvertiserControllers = {
   getAllAdvertisers,
   getSingleAdvertiser,
@@ -122,4 +146,5 @@ export const AdvertiserControllers = {
   deleteAdvertiser,
   getAdvertiserDashboardOverview,
   getMyReferredUsers,
+  getAdvertiserReferredUsers,
 };

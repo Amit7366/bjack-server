@@ -4,6 +4,7 @@ import AppError from '../errors/AppError';
 import QueryBuilder from '../builder/QueryBuilder';
 import { User } from '../User/user.model';
 import { USER_ROLE } from '../User/user.constant';
+import { assertAccountActiveForRestrictedAction } from '../User/userAccountStatus.util';
 import { ReferralModel } from '../Referral/referral.model';
 import { Advertiser } from '../Advertiser/advertiser.model';
 import { ITransaction } from '../Transaction/transaction.interface';
@@ -52,8 +53,10 @@ async function resolveAdvertiserReferrer(
   const pair = await ReferralModel.findOne({ referredUser: referredOid }).lean();
   if (!pair?.referrer) return null;
 
-  const referrer = await User.findById(pair.referrer).select('role id').lean();
+  const referrer = await User.findById(pair.referrer).select('role id status').lean();
   if (!referrer || referrer.role !== USER_ROLE.advertiser) return null;
+  // Paused partners (non-active) do not earn commission
+  if (referrer.status && referrer.status !== 'active') return null;
 
   const advertiser = await Advertiser.findOne({ user: pair.referrer }).select('id').lean();
   if (!advertiser) return null;
@@ -182,6 +185,8 @@ const applyWithdrawCommission = async (trx: ITransaction & { _id: Types.ObjectId
 };
 
 const getPartnerWallet = async (partnerUserId: string) => {
+  await assertAccountActiveForRestrictedAction(partnerUserId);
+
   const [balance, commissionRate] = await Promise.all([
     PartnerBalance.findOne({ userId: partnerUserId }).lean(),
     getCommissionRateForPartner(partnerUserId),
@@ -200,6 +205,8 @@ const getPartnerLedgerFromDB = async (
   partnerUserId: string,
   query: Record<string, unknown>,
 ) => {
+  await assertAccountActiveForRestrictedAction(partnerUserId);
+
   const ledgerQuery = new QueryBuilder(
     PartnerCommissionLedger.find({ partnerUserId }).sort({ createdAt: -1 }),
     query,
@@ -216,6 +223,11 @@ const getPartnerWithdrawRequestsFromDB = async (
   partnerUserId: string | null,
   query: Record<string, unknown>,
 ) => {
+  // Only gate partner self-service; admin listing passes null
+  if (partnerUserId) {
+    await assertAccountActiveForRestrictedAction(partnerUserId);
+  }
+
   const filter = partnerUserId ? { partnerUserId } : {};
   const requestQuery = new QueryBuilder(
     PartnerWithdrawRequest.find(filter)
@@ -245,6 +257,8 @@ const createWithdrawRequest = async (
     accountHolderName: string;
   },
 ) => {
+  await assertAccountActiveForRestrictedAction(partnerUserId);
+
   const amount = Number(payload.amount);
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Withdraw amount must be greater than zero');

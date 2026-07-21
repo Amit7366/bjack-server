@@ -87,6 +87,12 @@ router.post(
 
 router.get('/', adminAuth, AdvertiserControllers.getAllAdvertisers);
 
+router.get(
+  '/:id/referred-users',
+  adminAuth,
+  AdvertiserControllers.getAdvertiserReferredUsers,
+);
+
 router.get('/:id', adminAuth, AdvertiserControllers.getSingleAdvertiser);
 
 router.patch(

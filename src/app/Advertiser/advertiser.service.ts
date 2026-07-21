@@ -6,6 +6,7 @@ import AppError from '../errors/AppError';
 import QueryBuilder from '../builder/QueryBuilder';
 import { User } from '../User/user.model';
 import { generateAdvertiserId } from '../User/user.utils';
+import { assertAccountActiveForRestrictedAction } from '../User/userAccountStatus.util';
 import { AdminServices } from '../Admin/admin.service';
 import { AdvertiserSearchableFields } from './advertiser.constant';
 import { TAdvertiser } from './advertiser.interface';
@@ -235,6 +236,7 @@ const getAdvertiserDashboardOverviewFromDB = async (
   from?: string,
   to?: string,
 ) => {
+  await assertAccountActiveForRestrictedAction(userId);
   return AdminServices.getAdvertiserDashboardOverviewFromDB(userId, from, to);
 };
 
@@ -242,7 +244,19 @@ const getMyReferredUsersFromDB = async (
   userId: string,
   query: PartnerReferredUsersQuery,
 ) => {
+  await assertAccountActiveForRestrictedAction(userId);
   return getPartnerReferredUsersPage(userId, query);
+};
+
+const getAdvertiserReferredUsersFromDB = async (
+  advertiserId: string,
+  query: PartnerReferredUsersQuery,
+) => {
+  const advertiser = await Advertiser.findById(advertiserId).select('user').lean();
+  if (!advertiser) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Partner not found');
+  }
+  return getPartnerReferredUsersPage(String(advertiser.user), query);
 };
 
 export const AdvertiserServices = {
@@ -253,4 +267,5 @@ export const AdvertiserServices = {
   deleteAdvertiserFromDB,
   getAdvertiserDashboardOverviewFromDB,
   getMyReferredUsersFromDB,
+  getAdvertiserReferredUsersFromDB,
 };
