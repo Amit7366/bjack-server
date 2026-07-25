@@ -6,6 +6,11 @@ import { GameTxnRecord } from '../models/GameTxnRecord';
 import { UserBalance } from '../../Transaction/userBalance.model';
 import os from 'os';
 import { applyTurnoverForInsertedBets } from '../utils/turnoverProgress.util';
+import {
+  applyUsedGgrIncrement,
+  ensureGgrBalance,
+  sumUsedGgrDelta,
+} from './ggrBalance.service';
 
 type Normalized = {
   txnId: string;
@@ -117,6 +122,9 @@ export class TransactionService {
     let totalErrors = 0;
     let totalBalancesUpdated = 0;
     let totalSkippedNoBalance = 0;
+    let totalUsedGgrAdded = 0;
+
+    await ensureGgrBalance();
 
     // cache maps sbmId -> { ubId: ObjectId | null, userId: ObjectId | null }
     const cacheSbmToUb = new Map<string, { ubId: Types.ObjectId | null; userId: Types.ObjectId | null }>();
@@ -172,7 +180,14 @@ export class TransactionService {
     }
 
     if (normalizedBatches.length === 0) {
-      return { accepted: 0, duplicates: 0, errors: totalErrors, balancesUpdated: 0, skippedNoBalance: 0 };
+      return {
+        accepted: 0,
+        duplicates: 0,
+        errors: totalErrors,
+        balancesUpdated: 0,
+        skippedNoBalance: 0,
+        usedGgrAdded: 0,
+      };
     }
 
     const processBatch = async (normalized: Normalized[]) => {
@@ -243,7 +258,7 @@ export class TransactionService {
       totalDuplicates += duplicatesLocal;
 
       if (docsToInsert.length === 0) {
-        return { accepted: 0, duplicates: duplicatesLocal, balancesUpdated: 0 };
+        return { accepted: 0, duplicates: duplicatesLocal, balancesUpdated: 0, usedGgrAdded: 0 };
       }
 
       const insertedIndices = await insertGameTxnDocs(docsToInsert);
@@ -251,10 +266,12 @@ export class TransactionService {
       // Compute balance deltas only for inserted docs
       const balanceDelta = new Map<string, number>();
       let localAccepted = 0;
+      const insertedDocs: typeof docsToInsert = [];
       for (const idx of insertedIndices) {
         const d = docsToInsert[idx];
         if (!d) continue;
         localAccepted++;
+        insertedDocs.push(d);
         const ubIdStr = String(d.userBalanceId);
         const delta = +(d.win - d.bet);
         balanceDelta.set(ubIdStr, (balanceDelta.get(ubIdStr) || 0) + delta);
@@ -282,14 +299,22 @@ export class TransactionService {
         }
       }
 
-      if (insertedIndices.length > 0) {
-        const insertedDocs = insertedIndices
-          .map((idx) => docsToInsert[idx])
-          .filter(Boolean);
+      if (insertedDocs.length > 0) {
         await applyTurnoverForInsertedBets(insertedDocs);
       }
 
-      return { accepted: localAccepted, duplicates: duplicatesLocal, balancesUpdated };
+      // Loss bets only: used GGR += 10% of bet (bulk sum, one atomic $inc)
+      let usedGgrAdded = 0;
+      const usedGgrDelta = sumUsedGgrDelta(insertedDocs);
+      if (usedGgrDelta > 0) {
+        try {
+          usedGgrAdded = await applyUsedGgrIncrement(usedGgrDelta);
+        } catch {
+          // best-effort; do not fail ingest if GGR tracking fails
+        }
+      }
+
+      return { accepted: localAccepted, duplicates: duplicatesLocal, balancesUpdated, usedGgrAdded };
     };
 
     // Process normalized batches concurrently
@@ -301,6 +326,7 @@ export class TransactionService {
       if (!r) continue;
       totalAccepted += r.accepted ?? 0;
       totalBalancesUpdated += r.balancesUpdated ?? 0;
+      totalUsedGgrAdded += r.usedGgrAdded ?? 0;
     }
 
     return {
@@ -309,6 +335,7 @@ export class TransactionService {
       errors: totalErrors,
       balancesUpdated: totalBalancesUpdated,
       skippedNoBalance: totalSkippedNoBalance,
+      usedGgrAdded: totalUsedGgrAdded,
     };
   }
 }

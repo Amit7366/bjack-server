@@ -4,6 +4,7 @@ import catchAsync from '../../utilis/catchAsync';
 import sendResponse from '../../utilis/sendResponse';
 import { TransactionService } from '../services/transaction.service';
 import { TxProviderSyncService } from '../services/txProviderSync.service';
+import { getGgrBalance } from '../services/ggrBalance.service';
 
 export class TransactionsController {
   constructor(
@@ -19,6 +20,16 @@ export class TransactionsController {
       res.status(400).json({ status: false, message: e?.message ?? 'Bad request' });
     }
   };
+
+  getGgrBalance = catchAsync(async (_req: Request, res: Response) => {
+    const data = await getGgrBalance();
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'GGR balance',
+      data,
+    });
+  });
 
   /** Legacy blocking sync — admin/debug fallback. */
   syncUser = catchAsync(async (req: Request, res: Response) => {

@@ -13,6 +13,7 @@
     "seed:leads": "ts-node src/teleSalesLeads/seedTeleSalesLeads.ts",
     "seed:reward-offers": "ts-node src/scripts/seedRewardOffers.ts",
     "seed:missions": "ts-node src/scripts/seedMissions.ts",
+    "seed:ggr-balance": "ts-node src/scripts/seedGgrBalance.ts",
     "worker:callback": "ts-node src/app/GameCallback/queue/callbackQueue.consumer.ts",
     "start:prod": "node ./dist/server.js",
     "migrate:userId": "ts-node src/app/GameTxnRecords/scripts/migrateUserId.ts",

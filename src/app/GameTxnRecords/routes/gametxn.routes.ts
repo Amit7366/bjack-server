@@ -9,6 +9,12 @@ const tx = new TransactionsController();
 const gameTxnController = new GameTxnRecordsController();
 router.post('/api/transactions/ingest', tx.ingest);
 
+router.get(
+  '/api/ggr-balance',
+  auth(USER_ROLE.superAdmin, USER_ROLE.admin),
+  tx.getGgrBalance
+);
+
 router.post(
   '/api/transactions/sync-user',
   auth(USER_ROLE.user),
