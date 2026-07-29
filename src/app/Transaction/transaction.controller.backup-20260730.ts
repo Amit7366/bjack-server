@@ -253,36 +253,6 @@ const getDepositBonusPreview = catchAsync(async (req: Request, res: Response) =>
   });
 });
 
-const prepareGameLaunch = catchAsync(async (req: Request, res: Response) => {
-  const memberId = String(req.user?.id ?? '').trim();
-  if (!memberId) {
-    throw new AppError(httpStatus.UNAUTHORIZED, 'Member id missing from token');
-  }
-  const data = await TransactionService.prepareGameLaunch(memberId);
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Game launch prepared; balance zeroed',
-    data,
-  });
-});
-
-const returnGameWithdraw = catchAsync(async (req: Request, res: Response) => {
-  const memberId = String(req.user?.id ?? '').trim();
-  if (!memberId) {
-    throw new AppError(httpStatus.UNAUTHORIZED, 'Member id missing from token');
-  }
-  const data = await TransactionService.returnGameWithdraw(memberId);
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: data.skipped
-      ? 'No active game session'
-      : 'Game return withdraw successful',
-    data,
-  });
-});
-
 export const TransactionController = {
   createManualDeposit,
   createManualWithdraw,
@@ -298,6 +268,4 @@ export const TransactionController = {
   failAutoPayDeposit,
   getMyTurnover,
   getDepositBonusPreview,
-  prepareGameLaunch,
-  returnGameWithdraw,
 };

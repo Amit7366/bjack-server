@@ -33,10 +33,6 @@ const userBalanceSchema = new Schema(
     },
     /** Incremented on every balance write — clients compare for cross-device sync. */
     walletRevision: { type: Number, default: 0 },
-
-    /** True while user is in a game session (balance zeroed until getWithdraw return). */
-    gameSessionActive: { type: Boolean, default: false },
-    gameSessionZeroedAt: { type: Date, default: null },
   },
   { timestamps: true, versionKey: false }
 );

@@ -263,7 +263,8 @@ export class TransactionService {
 
       const insertedIndices = await insertGameTxnDocs(docsToInsert);
 
-      // Insert-only: do not $inc UserBalance — wallet is restored via getWithdraw on game return.
+      // Compute balance deltas only for inserted docs
+      const balanceDelta = new Map<string, number>();
       let localAccepted = 0;
       const insertedDocs: typeof docsToInsert = [];
       for (const idx of insertedIndices) {
@@ -271,6 +272,31 @@ export class TransactionService {
         if (!d) continue;
         localAccepted++;
         insertedDocs.push(d);
+        const ubIdStr = String(d.userBalanceId);
+        const delta = +(d.win - d.bet);
+        balanceDelta.set(ubIdStr, (balanceDelta.get(ubIdStr) || 0) + delta);
+      }
+
+      // Prepare bulk balance updates aggregated per userBalanceId
+      const balanceOps: any[] = [];
+      for (const [ubIdStr, sumDelta] of balanceDelta.entries()) {
+        // use ObjectId for filter
+        balanceOps.push({
+          updateOne: {
+            filter: { _id: new Types.ObjectId(ubIdStr) },
+            update: { $inc: { currentBalance: sumDelta, walletRevision: 1 } },
+          },
+        });
+      }
+
+      let balancesUpdated = 0;
+      if (balanceOps.length > 0) {
+        try {
+          const res = await UserBalance.bulkWrite(balanceOps, { ordered: false });
+          balancesUpdated = res.modifiedCount ?? (res as any).nModified ?? 0;
+        } catch {
+          // ignore errors in balance updates (best-effort)
+        }
       }
 
       if (insertedDocs.length > 0) {
@@ -288,12 +314,7 @@ export class TransactionService {
         }
       }
 
-      return {
-        accepted: localAccepted,
-        duplicates: duplicatesLocal,
-        balancesUpdated: 0,
-        usedGgrAdded,
-      };
+      return { accepted: localAccepted, duplicates: duplicatesLocal, balancesUpdated, usedGgrAdded };
     };
 
     // Process normalized batches concurrently

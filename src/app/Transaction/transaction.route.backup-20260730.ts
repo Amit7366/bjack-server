@@ -70,16 +70,4 @@ router.patch(
   TransactionController.updateStoreDbBalance
 );
 
-router.post(
-  '/game/prepare-launch',
-  auth(USER_ROLE.user),
-  TransactionController.prepareGameLaunch
-);
-
-router.post(
-  '/game/return-withdraw',
-  auth(USER_ROLE.user),
-  TransactionController.returnGameWithdraw
-);
-
 export const TransactionRoutes = router;
