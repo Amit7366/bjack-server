@@ -1312,13 +1312,9 @@ type TxWithdrawResponse = {
   amount?: string | number;
 };
 
-const isNoBalanceToWithdraw = (message?: string): boolean =>
-  /no balance to withdraw/i.test(String(message ?? ''));
-
 /**
  * On return from game: call getWithdraw.php, then set
  * currentBalance = withdrawnAmount + credits landed while away (Option B).
- * Provider "No balance to withdraw" = successful zero withdraw (user lost all at provider).
  */
 const returnGameWithdraw = async (memberId: string) => {
   const id = String(memberId ?? '').trim().toLowerCase();
@@ -1353,48 +1349,38 @@ const returnGameWithdraw = async (memberId: string) => {
     transfer_id: generateGameTransferId(),
   };
 
-  let providerJson: TxWithdrawResponse = {};
-  let providerHttpOk = false;
+  let providerJson: TxWithdrawResponse;
   try {
     const res = await fetch(TX_SERVER_WITHDRAW_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    providerHttpOk = res.ok;
     providerJson = (await res.json().catch(() => ({}))) as TxWithdrawResponse;
+    if (!res.ok) {
+      throw new AppError(
+        httpStatus.BAD_GATEWAY,
+        providerJson?.message || `Withdraw provider error (${res.status})`
+      );
+    }
   } catch (err) {
+    if (err instanceof AppError) throw err;
     throw new AppError(
       httpStatus.BAD_GATEWAY,
       err instanceof Error ? err.message : 'Failed to reach withdraw provider'
     );
   }
 
-  const emptyByMessage = isNoBalanceToWithdraw(providerJson.message);
-
-  if (!emptyByMessage) {
-    if (!providerHttpOk) {
-      throw new AppError(
-        httpStatus.BAD_GATEWAY,
-        providerJson?.message || 'Withdraw provider error'
-      );
-    }
-    if (providerJson.status === false) {
-      throw new AppError(
-        httpStatus.BAD_GATEWAY,
-        providerJson.message || 'Withdraw unsuccessful'
-      );
-    }
+  if (providerJson.status === false) {
+    throw new AppError(
+      httpStatus.BAD_GATEWAY,
+      providerJson.message || 'Withdraw unsuccessful'
+    );
   }
 
-  // Empty provider wallet (lost all / already withdrawn) → treat as 0, clear session.
-  let withdrawnAmount = 0;
-  if (!emptyByMessage) {
-    const parsed = Number.parseFloat(String(providerJson.amount ?? 0));
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      throw new AppError(httpStatus.BAD_GATEWAY, 'Invalid withdraw amount from provider');
-    }
-    withdrawnAmount = parsed;
+  const withdrawnAmount = Number.parseFloat(String(providerJson.amount ?? 0));
+  if (!Number.isFinite(withdrawnAmount) || withdrawnAmount < 0) {
+    throw new AppError(httpStatus.BAD_GATEWAY, 'Invalid withdraw amount from provider');
   }
 
   // Re-read so deposits/bonuses while in-game are included (Option B).
