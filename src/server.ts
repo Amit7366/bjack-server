@@ -33,6 +33,8 @@ function getAllowedOrigins(): string[] {
     'https://www.bkbaji.com',
     'https://admin.bkbaji.com',
     'https://aff.bkbaji.com',
+    'https://bkb444.site',
+    'https://www.bkb444.site',
     ...corsFromEnv,
   ];
 }

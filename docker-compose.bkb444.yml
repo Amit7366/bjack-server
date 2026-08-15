@@ -1,0 +1,16 @@
+name: bkb444-api
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      # Unique host port so this stack does not collide with other apps on the VPS
+      - "127.0.0.1:5044:5000"
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
