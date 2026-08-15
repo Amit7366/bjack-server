@@ -21,12 +21,10 @@ const seedVendorGames = async () => {
   try {
     await connectSeedDb();
     await dropLegacyGameCodeIndex();
-    let updatedCount = 0;
 
-    for (const game of vendorGames) {
+    const ops = vendorGames.map((game) => {
       const lobbyType = game.types[0] ?? inferGameTypeFromTitle(game.title, game.vendorCode);
       const gameType = lobbyCatalogTypeToTurnover(lobbyType);
-
       const doc: Record<string, unknown> = {
         tileId: game.tileId,
         title: game.title,
@@ -44,22 +42,31 @@ const seedVendorGames = async () => {
         gameCode: game.gameCode,
         provider: game.providerKey,
       };
-
       if (game.emoji) {
         doc.emoji = game.emoji;
       }
+      return {
+        updateOne: {
+          filter: { tileId: game.tileId },
+          update: { $set: doc },
+          upsert: true,
+        },
+      };
+    });
 
-      const result = await GameCatalogModel.updateOne(
-        { tileId: game.tileId },
-        { $set: doc },
-        { upsert: true },
-      );
-      if (result.upsertedCount > 0 || result.modifiedCount > 0) {
-        updatedCount++;
-      }
+    const BATCH = 500;
+    let upserted = 0;
+    let modified = 0;
+    for (let i = 0; i < ops.length; i += BATCH) {
+      const result = await GameCatalogModel.bulkWrite(ops.slice(i, i + BATCH), { ordered: false });
+      upserted += result.upsertedCount;
+      modified += result.modifiedCount;
+      console.log(`→ GameCatalog ${Math.min(i + BATCH, ops.length)}/${ops.length}`);
     }
 
-    console.log(`✅ Seeded or updated ${updatedCount} vendor games into GameCatalog (${vendorGames.length} total from gameData)`);
+    console.log(
+      `✅ Seeded or updated ${upserted + modified} vendor games into GameCatalog (${vendorGames.length} total from gameData)`,
+    );
     process.exit(0);
   } catch (error) {
     console.error('❌ Vendor games seeding failed:', error);
