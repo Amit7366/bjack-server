@@ -156,15 +156,23 @@ export const createUserIntoDb = async (
 
       // Handle duplicate keys
       if (err?.code === 11000) {
-        if (err.keyPattern?.userName) throw new AppError(httpStatus.CONFLICT, 'Username already exists');
+        if (err.keyPattern?.userName || err.keyPattern?.username) {
+          throw new AppError(httpStatus.CONFLICT, 'Username already exists');
+        }
         if (err.keyPattern?.contactNo) throw new AppError(httpStatus.CONFLICT, 'Phone number already exists');
         // 🔁 NEW: retry on duplicate id/referralId (regen next attempt)
         if ((err.keyPattern?.id || err.keyPattern?.referralId) && retries > 0) {
           console.warn('Duplicate id/referralId, regenerating and retrying...');
           continue;
         }
-        // (optional) email duplicate if you enforce unique email
-        if (err.keyPattern?.email) throw new AppError(httpStatus.CONFLICT, 'Email already exists');
+        if (err.keyPattern?.email && err.keyValue?.email != null) {
+          throw new AppError(httpStatus.CONFLICT, 'Email already exists');
+        }
+        const duplicateFields = Object.keys(err.keyPattern || {}).join(', ') || 'a unique field';
+        throw new AppError(
+          httpStatus.CONFLICT,
+          `Duplicate value for ${duplicateFields}`,
+        );
       }
 
       if (
