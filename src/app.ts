@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import cors from 'cors';
 import path from 'path';
+import { corsOriginDelegate } from './app/config/cors';
 import globalErrorHandler from './app/middleware/globalErrorHandler';
 import notFound from './app/middleware/notFound';
 import router from './app/routes';
@@ -78,32 +79,8 @@ app.use(
 );
 
 /** CORS for the rest (callback already responded earlier) */
-const corsFromEnv = (process.env.CORS_ORIGINS ?? '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:3002',
-  'http://localhost:3003',
-  'http://localhost:5000',
-  'http://localhost:5173',
-  'https://mns-client.vercel.app',
-  'https://bkbaji.com',
-  'https://www.bkbaji.com',
-  'https://admin.bkbaji.com',
-  'https://aff.bkbaji.com',
-  'https://bkb444.site',
-  'https://www.bkb444.site',
-  ...corsFromEnv,
-];
 const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, ok?: boolean) => void) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
-  },
+  origin: corsOriginDelegate,
   credentials: true,
   exposedHeaders: ['X-Handler-Time-ms', 'Server-Timing'],
 };

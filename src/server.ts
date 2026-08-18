@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import http from 'http';
 import { Server } from 'socket.io';
 import app from './app';
+import { corsOriginDelegate } from './app/config/cors';
 import config from './app/config';
 import seedSuperAdmin from './app/DB';
 import { setupSocketIO } from './app/socket/socket.config';
@@ -19,26 +20,6 @@ async function connectDB() {
   console.log('✅ MongoDB connected');
 }
 
-function getAllowedOrigins(): string[] {
-  const corsFromEnv = (process.env.CORS_ORIGINS ?? '')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
-  return [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:3002',
-    'http://localhost:5173',
-    'https://bkbaji.com',
-    'https://www.bkbaji.com',
-    'https://admin.bkbaji.com',
-    'https://aff.bkbaji.com',
-    'https://bkb444.site',
-    'https://www.bkb444.site',
-    ...corsFromEnv,
-  ];
-}
-
 async function startServer() {
   try {
     await connectDB();
@@ -48,7 +29,7 @@ async function startServer() {
     const io = new Server(server, {
       path: '/socket.io',
       cors: {
-        origin: getAllowedOrigins(),
+        origin: corsOriginDelegate,
         methods: ['GET', 'POST'],
         credentials: true,
       },
