@@ -16,7 +16,13 @@ router.post('/logout', AuthController.logoutUser);
 
 router.post(
   '/change-password',
-  auth(USER_ROLE.superAdmin, USER_ROLE.admin, USER_ROLE.user, USER_ROLE.advertiser),
+  auth(
+    USER_ROLE.superAdmin,
+    USER_ROLE.admin,
+    USER_ROLE.viewer,
+    USER_ROLE.user,
+    USER_ROLE.advertiser,
+  ),
   validateRequest(AuthValidation.changePasswordValidationSchema),
   AuthController.changePassword,
 );
@@ -27,6 +33,7 @@ router.post(
     USER_ROLE.user,
     USER_ROLE.superAdmin,
     USER_ROLE.admin,
+    USER_ROLE.viewer,
     USER_ROLE.advertiser,
   ),
   validateRequest(AuthValidation.refreshTokenValidationSchema),

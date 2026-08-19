@@ -39,7 +39,7 @@ const userValidationSchema = z.object({
     needsPasswordChange: z.boolean().default(true).optional(),
     userPlainPassword: emptyToUndefined.pipe(z.string()).optional(),
     passwordChangeAt: emptyToUndefined.pipe(z.string()).optional(),
-    role: z.enum(['superAdmin', 'admin', 'user', 'advertiser']).default('user').optional(),
+    role: z.enum(['superAdmin', 'admin', 'viewer', 'user', 'advertiser']).default('user').optional(),
     dateOfBirth: emptyToUndefined.pipe(z.string()).optional(),
     lastActiveAt: emptyToUndefined.pipe(z.string()).optional(),
     kycDocumentFrontUrl: emptyToUndefined.pipe(z.string()).optional(),

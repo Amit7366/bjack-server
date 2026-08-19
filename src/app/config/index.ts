@@ -34,6 +34,8 @@ export default {
 
   // Admin
   super_admin_password: process.env.SUPER_ADMIN_PASSWORD,
+  admin_viewer_mutations_enabled:
+    clean(process.env.ADMIN_VIEWER_MUTATIONS_ENABLED)?.toLowerCase() === 'true',
 
   // Payment
   payment_secret_key: process.env.PAYMENT_SECRET_KEY,

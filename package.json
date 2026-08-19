@@ -14,6 +14,7 @@
     "seed:reward-offers": "ts-node src/scripts/seedRewardOffers.ts",
     "seed:missions": "ts-node src/scripts/seedMissions.ts",
     "seed:ggr-balance": "ts-node src/scripts/seedGgrBalance.ts",
+    "seed:guest-viewer": "ts-node src/scripts/seedGuestViewer.ts",
     "seed:site": "npm run seed:home-games && npm run seed:exclusive-games && npm run seed:vendor-games && npm run seed:game-types && npm run seed:reward-offers && npm run seed:missions && npm run seed:ggr-balance",
     "worker:callback": "ts-node src/app/GameCallback/queue/callbackQueue.consumer.ts",
     "start:prod": "node ./dist/server.js",

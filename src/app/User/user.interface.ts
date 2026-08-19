@@ -37,7 +37,7 @@ export type TUser = {
 
   needsPasswordChange?: boolean;
   passwordChangeAt?: Date;
-  role: 'superAdmin' | 'admin' | 'user' | 'advertiser';
+  role: 'superAdmin' | 'admin' | 'viewer' | 'user' | 'advertiser';
   dateOfBirth?: Date;
   status?: 'active' | 'frozen' | 'deactivated' | 'pending';
   signupBonusGiven?: boolean;

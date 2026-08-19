@@ -53,7 +53,7 @@ export const createNormalUserValidationSchema = z.object({
       }).optional(),
 
       isDeleted: z.boolean().default(false).optional(),
-      role: z.enum(['superAdmin', 'admin', 'user', 'advertiser']).default('user').optional(),
+      role: z.enum(['superAdmin', 'admin', 'viewer', 'user', 'advertiser']).default('user').optional(),
       needsPasswordChange: z.boolean().default(true).optional(),
       userPlainPassword: emptyToUndefined.pipe(z.string()).optional(),
       passwordChangeAt: emptyToUndefined.pipe(z.string()).optional(),
@@ -125,7 +125,7 @@ export const updateNormalUserValidationSchema = z.object({
       }).optional(),
 
       isDeleted: z.boolean().default(false).optional(),
-      role: z.enum(['superAdmin', 'admin', 'user', 'advertiser']).default('user').optional(),
+      role: z.enum(['superAdmin', 'admin', 'viewer', 'user', 'advertiser']).default('user').optional(),
       needsPasswordChange: z.boolean().default(true).optional(),
       passwordChangeAt: emptyToUndefined.pipe(z.string()).optional(),
       lastActiveAt: emptyToUndefined.pipe(z.string()).optional(),

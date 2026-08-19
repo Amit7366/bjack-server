@@ -51,7 +51,7 @@ export type TNormalUser = {
 
   needsPasswordChange?: boolean;
   passwordChangeAt?: Date;
-  role: 'superAdmin' | 'admin' | 'user' | 'advertiser';
+  role: 'superAdmin' | 'admin' | 'viewer' | 'user' | 'advertiser';
   email?: string;
   emergencyContactNo?: string;
   bloodGroup?: TBloodGroup;

@@ -5,6 +5,18 @@ import catchAsync from '../utilis/catchAsync';
 import sendResponse from '../utilis/sendResponse';
 import AppError from '../errors/AppError';
 import { USER_ROLE } from '../User/user.constant';
+import config from '../config';
+
+const getCapabilities = catchAsync(async (_req, res) => {
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Admin capabilities fetched successfully',
+    data: {
+      viewerMutationsEnabled: Boolean(config.admin_viewer_mutations_enabled),
+    },
+  });
+});
 
 const getSingleAdmin = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -254,6 +266,7 @@ const getUsersWithHighBalance = catchAsync(async (req, res) => {
   });
 });
 export const AdminControllers = {
+  getCapabilities,
   getAllAdmins,
   getSingleAdmin,
   deleteAdmin,

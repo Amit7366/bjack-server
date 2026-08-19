@@ -131,7 +131,7 @@ export async function assertRoomAccess(caller: ChatCaller, roomId: string) {
     return room;
   }
 
-  if (caller.role === USER_ROLE.superAdmin) {
+  if (caller.role === USER_ROLE.superAdmin || caller.role === USER_ROLE.viewer) {
     return room;
   }
 
@@ -215,7 +215,11 @@ function toRoomSummary(
 }
 
 export async function listManageRooms(caller: ChatCaller): Promise<SupportRoomSummary[]> {
-  if (caller.role !== USER_ROLE.admin && caller.role !== USER_ROLE.superAdmin) {
+  if (
+    caller.role !== USER_ROLE.admin &&
+    caller.role !== USER_ROLE.superAdmin &&
+    caller.role !== USER_ROLE.viewer
+  ) {
     throw new AppError(httpStatus.FORBIDDEN, 'Access denied');
   }
 

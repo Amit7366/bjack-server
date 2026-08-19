@@ -273,7 +273,7 @@ const getMe = async (id: string, role: string) => {
       options: { strictPopulate: false },
     });
   }
-  if (role === 'admin') {
+  if (role === 'admin' || role === 'viewer') {
     // result = await Admin.findOne({ id: id }).populate('user');
     result = await Admin.findOne({ id: id }).populate({
       path: 'user',

@@ -10,6 +10,12 @@ import validateRequest from '../middleware/validateRequest';
 const router = express.Router();
 
 router.get(
+  '/capabilities',
+  auth(USER_ROLE.superAdmin, USER_ROLE.admin, USER_ROLE.viewer),
+  AdminControllers.getCapabilities,
+);
+
+router.get(
   '/',
   auth(USER_ROLE.superAdmin, USER_ROLE.admin),
   AdminControllers.getAllAdmins,

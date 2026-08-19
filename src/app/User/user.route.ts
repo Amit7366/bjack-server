@@ -68,6 +68,7 @@ router.get(
   auth(
     USER_ROLE.superAdmin,
     USER_ROLE.admin,
+    USER_ROLE.viewer,
     USER_ROLE.user,
     USER_ROLE.advertiser,
   ),
