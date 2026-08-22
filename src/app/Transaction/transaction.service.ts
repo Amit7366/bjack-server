@@ -1230,21 +1230,12 @@ const getDepositBonusPreview = async (
   };
 };
 
-const GAME_PLAYER_PREFIX =
-  process.env.GAME_LAUNCH_PLAYER_PREFIX || 'h94044';
-const GAME_MEMBER_SUFFIX = 'b';
-const TX_SERVER_WITHDRAW_URL =
-  process.env.TX_SERVER_WITHDRAW_URL || 'https://txserver.site/getWithdraw.php';
+const GAME_WITHDRAW_URL =
+  process.env.GAME_WITHDRAW_URL || 'https://apivexo.com/api/game/v1/getwithdraw';
+const GAME_API_SECRET = process.env.GAME_API_SECRET || '';
+const GAME_API_PREFIX = process.env.GAME_API_PREFIX || '';
 const GAME_HOME_URL =
   process.env.GAME_LAUNCH_HOME_URL || 'https://bkbaji.com';
-
-const buildGameMemberAccount = (memberId: string): string => {
-  const id = String(memberId ?? '').trim().toLowerCase();
-  if (!id) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Member id is required');
-  }
-  return `${GAME_PLAYER_PREFIX}_${id}_${GAME_MEMBER_SUFFIX}`;
-};
 
 const generateGameTransferId = (): string => {
   const timestamp = Date.now();
@@ -1307,16 +1298,36 @@ const prepareGameLaunch = async (memberId: string) => {
 };
 
 type TxWithdrawResponse = {
+  success?: boolean;
   status?: boolean;
   message?: string;
   amount?: string | number;
+  data?: {
+    amount?: string | number;
+    status?: boolean;
+    message?: string;
+  };
+  details?: {
+    status?: boolean;
+    message?: string;
+    error?: string;
+  };
 };
 
 const isNoBalanceToWithdraw = (message?: string): boolean =>
   /no balance to withdraw/i.test(String(message ?? ''));
 
+const withdrawProviderMessage = (json: TxWithdrawResponse): string =>
+  String(
+    json.message ??
+      json.data?.message ??
+      json.details?.message ??
+      json.details?.error ??
+      ''
+  );
+
 /**
- * On return from game: call getWithdraw.php, then set
+ * On return from game: call Apivexo getwithdraw, then set
  * currentBalance = withdrawnAmount + credits landed while away (Option B).
  * Provider "No balance to withdraw" = successful zero withdraw (user lost all at provider).
  */
@@ -1342,21 +1353,30 @@ const returnGameWithdraw = async (memberId: string) => {
     };
   }
 
+  if (!GAME_API_SECRET || !GAME_API_PREFIX) {
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'GAME_API_SECRET or GAME_API_PREFIX is not configured'
+    );
+  }
+
   const payload = {
-    member_account: buildGameMemberAccount(id),
-    timestamp: Date.now(),
-    credit_amount: 0,
-    currency_code: 'BDT',
+    apiSecret: GAME_API_SECRET,
+    prefix: GAME_API_PREFIX,
+    playerId: id,
+    balance: 0,
+    currencyCode: 'BDT',
     language: 'en',
-    platform: 'web',
-    home_url: GAME_HOME_URL,
+    homeUrl: GAME_HOME_URL,
+    platform: 1,
+    timestamp: Date.now(),
     transfer_id: generateGameTransferId(),
   };
 
   let providerJson: TxWithdrawResponse = {};
   let providerHttpOk = false;
   try {
-    const res = await fetch(TX_SERVER_WITHDRAW_URL, {
+    const res = await fetch(GAME_WITHDRAW_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1370,19 +1390,20 @@ const returnGameWithdraw = async (memberId: string) => {
     );
   }
 
-  const emptyByMessage = isNoBalanceToWithdraw(providerJson.message);
+  const providerMessage = withdrawProviderMessage(providerJson);
+  const emptyByMessage = isNoBalanceToWithdraw(providerMessage);
 
   if (!emptyByMessage) {
     if (!providerHttpOk) {
       throw new AppError(
         httpStatus.BAD_GATEWAY,
-        providerJson?.message || 'Withdraw provider error'
+        providerMessage || 'Withdraw provider error'
       );
     }
-    if (providerJson.status === false) {
+    if (providerJson.success === false || providerJson.status === false || providerJson.data?.status === false) {
       throw new AppError(
         httpStatus.BAD_GATEWAY,
-        providerJson.message || 'Withdraw unsuccessful'
+        providerMessage || 'Withdraw unsuccessful'
       );
     }
   }
@@ -1390,7 +1411,9 @@ const returnGameWithdraw = async (memberId: string) => {
   // Empty provider wallet (lost all / already withdrawn) → treat as 0, clear session.
   let withdrawnAmount = 0;
   if (!emptyByMessage) {
-    const parsed = Number.parseFloat(String(providerJson.amount ?? 0));
+    const parsed = Number.parseFloat(
+      String(providerJson.data?.amount ?? providerJson.amount ?? 0)
+    );
     if (!Number.isFinite(parsed) || parsed < 0) {
       throw new AppError(httpStatus.BAD_GATEWAY, 'Invalid withdraw amount from provider');
     }
