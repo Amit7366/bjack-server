@@ -88,9 +88,9 @@ const approveDeposit = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getBalance = catchAsync(async (req: Request, res: Response) => {
-  // console.log(req.params.userId);
   const data = await TransactionService.getUserBalance(req.params.userId);
 
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
