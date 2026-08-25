@@ -87,7 +87,7 @@ export class TxProviderSyncService {
   }
 
   private async runPreviewForUser(normalizedId: string): Promise<PreviewSyncResult> {
-    // Cron (`huidu_ingest_cron.php`) owns vendor fetch + ingest.
+    // Cron (`apivexoTxnIngest`) owns vendor fetch + ingest.
     // Game-return only reads current UserBalance from Mongo (no huidu.php).
     const { currentBalance, walletRevision } = await this.loadBalanceContext(normalizedId);
     const syncToken = randomUUID();

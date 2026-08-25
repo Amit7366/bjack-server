@@ -8,6 +8,7 @@ import config from './app/config';
 import seedSuperAdmin from './app/DB';
 import { setupSocketIO } from './app/socket/socket.config';
 import { setIO } from './app/socket/io';
+import { startApivexoTxnIngestCron } from './app/cron/apivexoTxnIngest.cron';
 
 let isConnected = false;
 let server: http.Server | null = null;
@@ -47,6 +48,7 @@ async function startServer() {
     const port = config.port || 5000;
     server.listen(port, () => {
       console.log(`🚀 Server running on port ${port} with Socket.IO`);
+      startApivexoTxnIngestCron();
     });
   } catch (err) {
     console.error('❌ Server start failed:', err);
