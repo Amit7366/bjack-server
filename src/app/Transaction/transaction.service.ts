@@ -1235,7 +1235,7 @@ const GAME_WITHDRAW_URL =
 const GAME_API_SECRET = process.env.GAME_API_SECRET || '';
 const GAME_API_PREFIX = process.env.GAME_API_PREFIX || '';
 const GAME_HOME_URL =
-  process.env.GAME_LAUNCH_HOME_URL || 'https://bkbaji.com';
+  process.env.GAME_LAUNCH_HOME_URL || 'https://rajabaji.com';
 
 const generateGameTransferId = (): string => {
   const timestamp = Date.now();

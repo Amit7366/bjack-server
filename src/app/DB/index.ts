@@ -4,8 +4,8 @@ import { User } from '../User/user.model';
 
 const superUser = {
   id: "S-0001",
-  userName: 'bkbaji@admin.com',
-  email: 'admin@bkbaji@admin.com.com',
+  userName: 'rajabaji@admin.com',
+  email: 'admin@rajabaji@admin.com.com',
   contactNo: '+41234567898',
   password: config.super_admin_password,
   role: USER_ROLE.superAdmin,

@@ -11,7 +11,7 @@ dotenv.config();
 export const GUEST_VIEWER = {
   userName: 'guestadmin',
   password: 'GuestView@2026',
-  email: 'guestadmin@bkbaji.local',
+  email: 'guestadmin@rajabaji.local',
   contactNo: '+8801999000111',
 };
 

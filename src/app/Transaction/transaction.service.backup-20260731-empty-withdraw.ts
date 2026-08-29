@@ -1236,7 +1236,7 @@ const GAME_MEMBER_SUFFIX = 'b';
 const TX_SERVER_WITHDRAW_URL =
   process.env.TX_SERVER_WITHDRAW_URL || 'https://txserver.site/getWithdraw.php';
 const GAME_HOME_URL =
-  process.env.GAME_LAUNCH_HOME_URL || 'https://bkbaji.com';
+  process.env.GAME_LAUNCH_HOME_URL || 'https://rajabaji.com';
 
 const buildGameMemberAccount = (memberId: string): string => {
   const id = String(memberId ?? '').trim().toLowerCase();

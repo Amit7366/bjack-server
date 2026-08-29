@@ -1,4 +1,9 @@
 node_modules
 dist
 .env
+.env.example
 .vercel
+
+# Local seed payloads only — do not ship to GitHub or VPS
+src/data/
+src/teleSalesLeads/teleSalesLeads.data.ts
