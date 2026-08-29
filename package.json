@@ -1,7 +1,7 @@
 {
   "name": "betmaster24-server",
   "version": "1.0.0",
-  "description": "🖥️ Cashooz – Backend Server 🔗 Frontend Live Site: https://www.cashooz.com 📦 Frontend Repository: https://github.com/Sabbir386/cashooz-client",
+  "description": "Backend server",
   "main": "index.js",
   "scripts": {
     "start:dev": "ts-node-dev --respawn --transpile-only ./src/server.ts",
@@ -92,13 +92,5 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Sabbir386/betMaster24-server.git"
-  },
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/Sabbir386/betMaster24-server/issues"
-  },
-  "homepage": "https://github.com/Sabbir386/betMaster24-server#readme"
+  "type": "commonjs"
 }
