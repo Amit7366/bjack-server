@@ -16,7 +16,12 @@ export function startApivexoTxnIngestCron() {
     async () => {
       try {
         const result = await runApivexoTxnIngestTick();
-        if (result.skipped) return;
+        if (result.skipped) {
+          if (result.skipped === 'no_credentials' || result.skipped === 'disabled') {
+            console.log(`[apivexo-ingest] skipped=${result.skipped}`);
+          }
+          return;
+        }
         console.log(
           `[apivexo-ingest] pages=${result.pages} fetched=${result.fetched} accepted=${result.accepted} dupes=${result.duplicates} skippedNoBalance=${result.skippedNoBalance} errors=${result.errors} truncated=${result.truncated}`,
         );

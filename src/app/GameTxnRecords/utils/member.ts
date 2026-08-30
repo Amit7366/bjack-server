@@ -1,14 +1,22 @@
-/** Matches legacy sbm* and current bkb* member ids embedded in provider member_account. */
-const MEMBER_ID_SEGMENT = /^(?:sbm|bkb)\d+$/i;
+/** Matches legacy sbm/bkb and current rajab ids in provider member_account. */
+const MEMBER_ID_SEGMENT = /^(?:sbm|bkb|rajab)\d+$/i;
 
-/** Same default as client NEXT_PUBLIC_GAME_PLAYER_PREFIX / game-launch.ts */
-const PLAYER_PREFIX =
-  (typeof process !== 'undefined' && process.env.GAME_LAUNCH_PLAYER_PREFIX) || 'h94044';
+function playerPrefixes(): string[] {
+  const fromEnv = [
+    process.env.GAME_LAUNCH_PLAYER_PREFIX,
+    process.env.GAME_API_PREFIX,
+  ];
+  const prefixes = [...fromEnv, 'h94044']
+    .map((p) => String(p ?? '').trim().toLowerCase())
+    .filter(Boolean);
+  return [...new Set(prefixes)];
+}
 
 /**
  * Extract member id from either:
- *   - h94044_bkb47700_b  → bkb47700 (underscore middle segment)
- *   - h94044bkb47700     → bkb47700 (strip player prefix)
+ *   - rajab47000
+ *   - 6PXTH_rajab47000 / h94044_bkb47700_b
+ *   - 6PXTHrajab47000 / h94044bkb47700
  */
 export const extractSbmId = (member: string): string | null => {
   const trimmed = member.trim();
@@ -17,11 +25,12 @@ export const extractSbmId = (member: string): string | null => {
   const piece = trimmed.split('_').find((p) => MEMBER_ID_SEGMENT.test(p));
   if (piece) return piece.toLowerCase();
 
-  const prefix = PLAYER_PREFIX.toLowerCase();
   const lower = trimmed.toLowerCase();
-  if (lower.startsWith(prefix) && lower.length > prefix.length) {
-    const rest = lower.slice(prefix.length);
-    if (MEMBER_ID_SEGMENT.test(rest)) return rest;
+  for (const prefix of playerPrefixes()) {
+    if (lower.startsWith(prefix) && lower.length > prefix.length) {
+      const rest = lower.slice(prefix.length).replace(/^_+/, '');
+      if (MEMBER_ID_SEGMENT.test(rest)) return rest;
+    }
   }
 
   return null;
