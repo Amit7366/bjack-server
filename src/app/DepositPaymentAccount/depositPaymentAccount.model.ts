@@ -3,7 +3,7 @@ import {
   DepositPaymentAccountModel,
   TDepositPaymentAccount,
 } from './depositPaymentAccount.interface';
-import { PAYMENT_METHODS } from './depositPaymentAccount.constant';
+import { DEFAULT_PAYMENT_TYPE, PAYMENT_METHODS, PAYMENT_TYPES } from './depositPaymentAccount.constant';
 
 const depositPaymentAccountSchema = new Schema<TDepositPaymentAccount, DepositPaymentAccountModel>(
   {
@@ -12,6 +12,11 @@ const depositPaymentAccountSchema = new Schema<TDepositPaymentAccount, DepositPa
       enum: PAYMENT_METHODS,
       required: true,
       index: true,
+    },
+    paymentType: {
+      type: String,
+      enum: PAYMENT_TYPES,
+      default: DEFAULT_PAYMENT_TYPE,
     },
     channelId: {
       type: String,

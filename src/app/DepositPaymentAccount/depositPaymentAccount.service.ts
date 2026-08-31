@@ -2,7 +2,7 @@ import httpStatus from 'http-status';
 import AppError from '../errors/AppError';
 import { DepositPaymentAccount } from './depositPaymentAccount.model';
 import { TDepositPaymentAccount } from './depositPaymentAccount.interface';
-import { TPaymentMethod } from './depositPaymentAccount.constant';
+import { resolvePaymentType, TPaymentMethod } from './depositPaymentAccount.constant';
 
 const normalizeChannelId = (value: string) =>
   value
@@ -11,20 +11,30 @@ const normalizeChannelId = (value: string) =>
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-_]/g, '');
 
+const withPaymentType = <T extends { paymentType?: string }>(account: T) => ({
+  ...account,
+  paymentType: resolvePaymentType(account.paymentType),
+});
+
 const getAllAccountsFromDB = async () => {
-  return DepositPaymentAccount.find().sort({ paymentMethod: 1, sortOrder: 1, createdAt: -1 }).lean();
+  const rows = await DepositPaymentAccount.find()
+    .sort({ paymentMethod: 1, sortOrder: 1, createdAt: -1 })
+    .lean();
+  return rows.map(withPaymentType);
 };
 
 const getActiveAccountsForDeposit = async () => {
-  return DepositPaymentAccount.find({ isEnabled: true, isActive: true })
+  const rows = await DepositPaymentAccount.find({ isEnabled: true, isActive: true })
     .sort({ paymentMethod: 1, sortOrder: 1 })
     .lean();
+  return rows.map(withPaymentType);
 };
 
 const getEnabledAccountsForDeposit = async () => {
-  return DepositPaymentAccount.find({ isEnabled: true })
+  const rows = await DepositPaymentAccount.find({ isEnabled: true })
     .sort({ paymentMethod: 1, sortOrder: 1, createdAt: -1 })
     .lean();
+  return rows.map(withPaymentType);
 };
 
 const clearRecommendedForMethod = async (
@@ -59,6 +69,7 @@ const createAccountIntoDB = async (payload: Partial<TDepositPaymentAccount>) => 
   const created = await DepositPaymentAccount.create({
     ...payload,
     channelId,
+    paymentType: resolvePaymentType(payload.paymentType),
     isEnabled: payload.isEnabled ?? true,
     isActive: false,
     recommended: payload.recommended ?? false,
@@ -77,6 +88,9 @@ const updateAccountIntoDB = async (id: string, payload: Partial<TDepositPaymentA
   const patch: Partial<TDepositPaymentAccount> = { ...payload };
   if (payload.channelId) {
     patch.channelId = normalizeChannelId(payload.channelId);
+  }
+  if (payload.paymentType) {
+    patch.paymentType = resolvePaymentType(payload.paymentType);
   }
 
   if (patch.channelId || patch.paymentMethod) {
@@ -148,11 +162,12 @@ const deleteAccountFromDB = async (id: string) => {
 };
 
 const resolveActiveAccountForMethod = async (paymentMethod: TPaymentMethod) => {
-  return DepositPaymentAccount.findOne({
+  const account = await DepositPaymentAccount.findOne({
     paymentMethod,
     isEnabled: true,
     isActive: true,
   }).lean();
+  return account ? withPaymentType(account) : account;
 };
 
 export const DepositPaymentAccountServices = {

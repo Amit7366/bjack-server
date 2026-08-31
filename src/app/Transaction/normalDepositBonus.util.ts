@@ -1,3 +1,5 @@
+import { NORMAL_DEPOSIT_BONUS_RATE } from '../Promotion/promotion.constant';
+
 export const NEW_MEMBER_TIER_AMOUNT = 100;
 export const NEW_MEMBER_TIER_TURNOVER_X = 17;
 export const NEW_MEMBER_TIER_RATES = [1.2, 0.48, 0.38] as const;
@@ -40,7 +42,7 @@ export function resolveNormalDepositBonus(
     };
   }
 
-  const bonusAmount = Math.floor(depositAmt * 0.05);
+  const bonusAmount = Math.floor(depositAmt * NORMAL_DEPOSIT_BONUS_RATE);
   const totalCredited = depositAmt + bonusAmount;
   return {
     bonusAmount,
@@ -50,6 +52,6 @@ export function resolveNormalDepositBonus(
     promoCode: 'NO_PROMO',
     isTierBonus: false,
     tierNumber: null,
-    bonusRate: 0.05,
+    bonusRate: NORMAL_DEPOSIT_BONUS_RATE,
   };
 }

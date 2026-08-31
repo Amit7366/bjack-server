@@ -12,17 +12,18 @@ export const PromotionService = {
 
   lockPromotionToUser: async (userId: string, code: string) => {
     if (code === 'NO_PROMO') {
+      const promo = PromotionService.getPromotionByCode('NO_PROMO');
       return await UserPromotion.create({
         userId,
         selectedPromoCode: 'NO_PROMO',
-        bonusRate: 0.05,
-        turnoverX: 1,
-        eligibleGames: ['all'],
-        maxWithdrawLimit: null,
-        usageType: 'always',
+        bonusRate: promo?.bonusRate ?? 0.02,
+        turnoverX: promo?.turnoverX ?? 1,
+        eligibleGames: promo?.eligibleGames ?? ['all'],
+        maxWithdrawLimit: promo?.maxWithdrawLimit ?? null,
+        usageType: promo?.usageType ?? 'always',
         promoIsLocked: true,
         promoCode: 'NO_PROMO',
-        minDeposit: 0,
+        minDeposit: promo?.minDeposit ?? 0,
       });
     }
 

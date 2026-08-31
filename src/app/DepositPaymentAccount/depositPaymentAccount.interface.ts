@@ -1,9 +1,10 @@
 import { Model, Types } from 'mongoose';
-import { TPaymentMethod } from './depositPaymentAccount.constant';
+import { TPaymentMethod, TPaymentType } from './depositPaymentAccount.constant';
 
 export type TDepositPaymentAccount = {
   _id?: Types.ObjectId;
   paymentMethod: TPaymentMethod;
+  paymentType: TPaymentType;
   channelId: string;
   channelName: string;
   accountNumber: string;

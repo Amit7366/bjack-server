@@ -1,14 +1,16 @@
 import type { PromotionConfig } from "./promotion.types";
 
+export const NORMAL_DEPOSIT_BONUS_RATE = 0.02;
+
 export const PROMOTION_LIST: PromotionConfig[] = [
   {
     code: "NO_PROMO",
     title: "Normal",
     titleBn: "নরমাল",
-    description: "Normal deposit with 5% bonus",
-    descriptionBn: "৫% বোনাস সহ নরমাল ডিপোজিট",
+    description: "Normal deposit with 2% bonus",
+    descriptionBn: "২% বোনাস সহ নরমাল ডিপোজিট",
     minDeposit: 0,
-    bonusRate: 0.05,
+    bonusRate: NORMAL_DEPOSIT_BONUS_RATE,
     turnoverX: 1,
     eligibleGames: ["all"],
     maxWithdrawLimit: null,

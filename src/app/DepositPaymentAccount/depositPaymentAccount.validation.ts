@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { PAYMENT_METHODS } from './depositPaymentAccount.constant';
+import { PAYMENT_METHODS, PAYMENT_TYPES } from './depositPaymentAccount.constant';
 
 const accountBody = z.object({
   paymentMethod: z.enum(PAYMENT_METHODS),
+  paymentType: z.enum(PAYMENT_TYPES).optional(),
   channelId: z.string().trim().min(1).max(64),
   channelName: z.string().trim().min(1).max(120),
   accountNumber: z.string().trim().min(6).max(20),
