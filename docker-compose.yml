@@ -3,11 +3,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
     restart: unless-stopped
     env_file:
       - .env
     ports:
       - "127.0.0.1:5000:5000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       NODE_ENV: production
       PORT: "5000"
