@@ -120,6 +120,14 @@ jobs:
             docker compose build --progress=plain
             docker compose up -d
 
+            echo "Freeing port 80/443 from Apache/cPanel if present..."
+            for svc in httpd apache2 lsws ols cpanel; do
+              sudo systemctl stop "${svc}" 2>/dev/null || true
+              sudo systemctl disable "${svc}" 2>/dev/null || true
+            done
+            sudo systemctl mask httpd 2>/dev/null || true
+            ss -tlnp | grep -E ':80 |:443 ' || true
+
             sudo nginx -t
             sudo sed -i -E 's/^(\s*)listen\s+\[::\]/#\1listen [::]/' /etc/nginx/nginx.conf || true
             sudo systemctl unmask nginx || true
@@ -143,6 +151,14 @@ jobs:
               sudo cp "deploy/nginx/${DOMAIN}.ssl.conf" "/etc/nginx/sites-available/${DOMAIN}"
               sudo ln -sf "/etc/nginx/sites-available/${DOMAIN}" "/etc/nginx/sites-enabled/${DOMAIN}"
             fi
+
+            echo "Freeing port 80/443 from Apache/cPanel if present..."
+            for svc in httpd apache2 lsws ols cpanel; do
+              sudo systemctl stop "${svc}" 2>/dev/null || true
+              sudo systemctl disable "${svc}" 2>/dev/null || true
+            done
+            sudo systemctl mask httpd 2>/dev/null || true
+            ss -tlnp | grep -E ':80 |:443 ' || true
 
             sudo nginx -t
             sudo sed -i -E 's/^(\s*)listen\s+\[::\]/#\1listen [::]/' /etc/nginx/nginx.conf || true
