@@ -7,13 +7,22 @@ import { inferGameTypeFromTitle, lobbyCatalogTypeToTurnover } from '../app/GameE
 dotenv.config();
 
 async function dropLegacyGameCodeIndex() {
-  const indexes = await GameCatalogModel.collection.indexes();
-  for (const idx of indexes) {
-    const name = idx.name;
-    if (name === 'game_code_1' || name === 'gameCode_1') {
-      await GameCatalogModel.collection.dropIndex(name);
-      console.log(`→ Dropped legacy index: ${name}`);
+  try {
+    const indexes = await GameCatalogModel.collection.indexes();
+    for (const idx of indexes) {
+      const name = idx.name;
+      if (name === 'game_code_1' || name === 'gameCode_1') {
+        await GameCatalogModel.collection.dropIndex(name);
+        console.log(`→ Dropped legacy index: ${name}`);
+      }
     }
+  } catch (error: unknown) {
+    const mongoError = error as { code?: number; codeName?: string };
+    if (mongoError.code === 26 || mongoError.codeName === 'NamespaceNotFound') {
+      console.log('→ gamecatalogs collection does not exist yet, skipping index drop');
+      return;
+    }
+    throw error;
   }
 }
 

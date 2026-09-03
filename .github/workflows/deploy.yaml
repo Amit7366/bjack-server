@@ -94,6 +94,8 @@ jobs:
             fi
 
             docker compose down --remove-orphans 2>/dev/null || true
+            export DOCKER_BUILDKIT=1
+            export BUILDKIT_MAX_PARALLELISM=1
             docker compose up -d --build
 
             sudo nginx -t
