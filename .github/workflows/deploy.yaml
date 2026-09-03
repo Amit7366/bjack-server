@@ -121,7 +121,8 @@ jobs:
             docker compose up -d
 
             sudo nginx -t
-            sudo systemctl reload nginx
+            sudo systemctl enable nginx
+            sudo systemctl reload-or-restart nginx
 
             if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
               echo "Requesting TLS certificate for ${DOMAIN}..."
@@ -137,6 +138,7 @@ jobs:
             fi
 
             sudo nginx -t
-            sudo systemctl reload nginx
+            sudo systemctl enable nginx
+            sudo systemctl reload-or-restart nginx
 
             echo "Deployed https://${DOMAIN}"
