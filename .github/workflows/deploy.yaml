@@ -121,8 +121,15 @@ jobs:
             docker compose up -d
 
             sudo nginx -t
-            sudo systemctl enable nginx
-            sudo systemctl reload-or-restart nginx
+            sudo sed -i -E 's/^(\s*)listen\s+\[::\]/#\1listen [::]/' /etc/nginx/nginx.conf || true
+            sudo systemctl unmask nginx || true
+            sudo systemctl enable nginx || true
+            if ! sudo systemctl restart nginx; then
+              echo "===== nginx failed to start ====="
+              sudo systemctl status nginx --no-pager || true
+              sudo journalctl -xeu nginx -n 80 --no-pager || true
+              exit 1
+            fi
 
             if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
               echo "Requesting TLS certificate for ${DOMAIN}..."
@@ -138,7 +145,14 @@ jobs:
             fi
 
             sudo nginx -t
-            sudo systemctl enable nginx
-            sudo systemctl reload-or-restart nginx
+            sudo sed -i -E 's/^(\s*)listen\s+\[::\]/#\1listen [::]/' /etc/nginx/nginx.conf || true
+            sudo systemctl unmask nginx || true
+            sudo systemctl enable nginx || true
+            if ! sudo systemctl restart nginx; then
+              echo "===== nginx failed to start ====="
+              sudo systemctl status nginx --no-pager || true
+              sudo journalctl -xeu nginx -n 80 --no-pager || true
+              exit 1
+            fi
 
             echo "Deployed https://${DOMAIN}"
