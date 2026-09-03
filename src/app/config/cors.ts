@@ -10,21 +10,15 @@ const explicitOrigins = new Set([
   'http://localhost:3003',
   'http://localhost:5000',
   'http://localhost:5173',
-  'https://mns-client.vercel.app',
-  'https://raja1.online',
-  'https://www.raja1.online',
-  'https://admin.raja1.online',
-  'https://aff.raja1.online',
-  'https://bkb444.site',
-  'https://www.bkb444.site',
-  'https://admin.bkb444.site',
-  'https://raja1.online',
-  'https://www.raja1.online',
+  'https://city777.shop',
+  'https://www.city777.shop',
+  'https://admin.city777.shop',
+  'https://aff.city777.shop',
   ...corsFromEnv,
 ]);
 
-/** Apex hosts whose every subdomain is allowed over HTTPS. */
-const wildcardApexHosts = ['bkb444.site', 'raja1.online', 'raja1.online'];
+/** Apex hosts whose every subdomain is allowed over HTTPS (https://*.city777.shop). */
+const wildcardApexHosts = ['city777.shop'];
 
 function hostMatchesApex(hostname: string, apex: string): boolean {
   return hostname === apex || hostname.endsWith(`.${apex}`);

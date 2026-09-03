@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-raja-server
+  group: deploy-city-server
   cancel-in-progress: false
 
 jobs:
@@ -32,8 +32,8 @@ jobs:
           script: |
             set -euo pipefail
             export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-            DEPLOY_DIR="/root/raja-server"
-            DOMAIN="api.raja1.online"
+            DEPLOY_DIR="/root/city-server"
+            DOMAIN="api.city777.shop"
             REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
 
             if ! command -v git >/dev/null 2>&1; then
@@ -49,9 +49,15 @@ jobs:
               exit 1
             fi
 
+            mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /var/www/html
+            printf 'include /etc/nginx/sites-enabled/*;\n' > /etc/nginx/conf.d/zz-sites-enabled.conf
+            if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce 2>/dev/null || true)" != "Disabled" ]; then
+              setsebool -P httpd_can_network_connect 1 || true
+            fi
+
             ENV_BACKUP=""
             if [ -f "${DEPLOY_DIR}/.env" ]; then
-              ENV_BACKUP="/tmp/raja-server.env"
+              ENV_BACKUP="/tmp/city-server.env"
               cp "${DEPLOY_DIR}/.env" "${ENV_BACKUP}"
             fi
 

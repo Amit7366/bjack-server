@@ -1,64 +1,64 @@
-# Deploy API to VPS (api.raja1.online)
+# Deploy API to VPS (api.city777.shop)
 
-Same VPS as the client: `187.53.128.57`  
-DNS A record: `api.raja1.online` → `187.53.128.57`
+Same VPS as the client: `103.72.65.213`  
+DNS A record: `api.city777.shop` → `103.72.65.213` (Cloudflare **DNS only** / grey cloud until SSL is issued)
 
-Seed data locally first (already done). The VPS does not get `src/data`.
+Create the `api` A record in Cloudflare before the first deploy. The apex record for `city777.shop` does **not** cover this subdomain.
 
 ## 1. DNS
 
-Create an A record:
+| Host | Type | Value | Proxy |
+|---|---|---|---|
+| `@` | A | `103.72.65.213` | DNS only (grey) |
+| `api` | A | `103.72.65.213` | DNS only (grey) |
 
-| Host | Type | Value |
-|---|---|---|
-| `api` | A | `187.53.128.57` |
+Wait until `ping api.city777.shop` hits `103.72.65.213`.
 
-Wait until `ping api.raja1.online` hits that IP.
+## 2. GitHub secrets (city-server repo)
 
-## 2. GitHub secrets (raja-server repo)
+In **https://github.com/Amit7366/city-server** → **Settings → Secrets and variables → Actions**
 
-Repo: `https://github.com/Amit7366/raja-server`  
-**Settings → Secrets and variables → Actions**
-
-Use the **same** values as `raja-client`:
+Use the **same** values as `city-client`:
 
 | Secret | Value |
 |---|---|
-| `VPS_HOST` | `187.53.128.57` |
+| `VPS_HOST` | `103.72.65.213` |
 | `VPS_USERNAME` | `root` |
-| `VPS_KEY` | same private key as client (`~/.ssh/raja_deploy`) |
+| `VPS_KEY` | same private key as client (`~/.ssh/city_deploy`) |
 
-## 3. Create `.env` on the VPS (before first deploy)
+## 3. Create `.env` on the VPS (required before first API deploy)
 
 ```bash
-ssh -i ~/.ssh/raja_deploy root@187.53.128.57
-mkdir -p /root/raja-server
-nano /root/raja-server/.env
+ssh -i ~/.ssh/city_deploy root@103.72.65.213
+mkdir -p /root/city-server
+nano /root/city-server/.env
 ```
 
-Copy from your local `server/.env`, then change production URLs to:
+Copy from your local `server/.env`, then set production URLs to:
 
 ```env
 NODE_ENV=production
 PORT=5000
-BASE_URL=https://api.raja1.online
-CALLBACK_URL=https://api.raja1.online/api/v1/callback
-BKASH_CALLBACK_URL=https://api.raja1.online/api/v1/bkash/callback
-RESET_PASS_UI_LINK=https://raja1.online/auth/reset-password
-GAME_LAUNCH_HOME_URL=https://raja1.online
-PROVIDER_WHITELIST_DOMAIN=api.raja1.online
-CORS_ORIGINS=https://raja1.online,https://www.raja1.online
+BASE_URL=https://api.city777.shop
+CALLBACK_URL=https://api.city777.shop/api/v1/callback
+BKASH_CALLBACK_URL=https://api.city777.shop/api/v1/bkash/callback
+RESET_PASS_UI_LINK=https://city777.shop/auth/reset-password
+GAME_LAUNCH_HOME_URL=https://city777.shop
+PROVIDER_WHITELIST_DOMAIN=api.city777.shop
+CORS_ORIGINS=https://city777.shop,https://www.city777.shop
 ```
 
 Keep `DATABASE_URL`, JWT secrets, `SUPER_ADMIN_PASSWORD`, and `GAME_API_*` from your working local `.env`.
 
-## 4. Push deploy files
+CORS already allows `https://city777.shop` and every `https://*.city777.shop` subdomain in code.
+
+## 4. Push to `main`
 
 From `server/`:
 
 ```bash
-git add docker-compose.yml Dockerfile .github/workflows/deploy.yaml deploy DEPLOY.md .env.example src/app.ts src/app/config/cors.ts
-git commit -m "Add Docker CI/CD for api.raja1.online"
+git add -A
+git commit -m "Configure Docker CI/CD for api.city777.shop"
 git push origin main
 ```
 
@@ -67,7 +67,7 @@ Pushing `main` starts **Actions → Deploy API**.
 ## 5. Verify
 
 ```bash
-curl https://api.raja1.online
+curl https://api.city777.shop
 ```
 
-Browser WebSocket should be `wss://api.raja1.online/socket.io/...`
+Browser WebSocket should be `wss://api.city777.shop/socket.io/...`

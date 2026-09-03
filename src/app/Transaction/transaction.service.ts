@@ -1235,7 +1235,7 @@ const GAME_WITHDRAW_URL =
 const GAME_API_SECRET = process.env.GAME_API_SECRET || '';
 const GAME_API_PREFIX = process.env.GAME_API_PREFIX || '';
 const GAME_HOME_URL =
-  process.env.GAME_LAUNCH_HOME_URL || 'https://raja1.online';
+  process.env.GAME_LAUNCH_HOME_URL || 'https://city777.shop';
 
 const generateGameTransferId = (): string => {
   const timestamp = Date.now();
