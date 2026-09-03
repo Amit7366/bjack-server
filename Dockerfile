@@ -3,17 +3,17 @@
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
-ENV NODE_ENV=development
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 ENV NPM_CONFIG_FUND=false
 ENV NPM_CONFIG_AUDIT=false
-ENV NODE_OPTIONS=--max-old-space-size=1024
+ENV NPM_CONFIG_MAXSOCKETS=1
 
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund --maxsockets=1
 
 COPY . .
-RUN npm run build && npm prune --omit=dev
+RUN NODE_OPTIONS=--max-old-space-size=768 npm run build \
+  && npm prune --omit=dev
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
