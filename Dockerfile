@@ -1,26 +1,30 @@
-# syntax=docker/dockerfile:1
-
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
-ENV NPM_CONFIG_UPDATE_NOTIFIER=false
-ENV NPM_CONFIG_FUND=false
-ENV NPM_CONFIG_AUDIT=false
-ENV NPM_CONFIG_MAXSOCKETS=1
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV CI=true \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false \
+    NPM_CONFIG_UNSAFE_PERM=true
 
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund --maxsockets=1
+# npm 10 (bundled with Node 22) crashes in Docker with "Exit handler never called".
+RUN npm install -g npm@9.9.4 \
+  && npm ci --unsafe-perm --foreground-scripts --no-audit --no-fund \
+  || (echo "===== npm debug log =====" && cat /root/.npm/_logs/*debug*.log && exit 1)
 
 COPY . .
-RUN NODE_OPTIONS=--max-old-space-size=768 npm run build \
-  && npm prune --omit=dev
+RUN npm run build && npm prune --omit=dev
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=5000
-ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 
 COPY package.json package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
