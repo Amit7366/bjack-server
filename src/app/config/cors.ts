@@ -30,8 +30,9 @@ export function isAllowedCorsOrigin(origin: string | undefined): boolean {
 
   try {
     const url = new URL(origin);
-    if (url.protocol !== 'https:') return false;
     const hostname = url.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
     return wildcardApexHosts.some((apex) => hostMatchesApex(hostname, apex));
   } catch {
     return false;
@@ -46,5 +47,5 @@ export function corsOriginDelegate(
     callback(null, true);
     return;
   }
-  callback(new Error('Not allowed by CORS'));
+  callback(new Error(`Not allowed by CORS (${origin ?? 'unknown origin'})`));
 }
