@@ -13,6 +13,7 @@ export default {
   NODE_ENV: clean(process.env.NODE_ENV),
   port: clean(process.env.PORT),
   database_url: clean(process.env.DATABASE_URL),
+  database_name: clean(process.env.DATABASE_NAME) || 'banglajackpot',
 
   // Auth & Security
   bcrypt_salt_round: process.env.BCEYPT_SALT_ROUND,

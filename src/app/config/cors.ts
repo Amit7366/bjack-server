@@ -10,15 +10,15 @@ const explicitOrigins = new Set([
   'http://localhost:3003',
   'http://localhost:5000',
   'http://localhost:5173',
-  'https://city777.shop',
-  'https://www.city777.shop',
-  'https://admin.city777.shop',
-  'https://aff.city777.shop',
+  'https://banglajackpot.online',
+  'https://www.banglajackpot.online',
+  'https://admin.banglajackpot.online',
+  'https://aff.banglajackpot.online',
   ...corsFromEnv,
 ]);
 
-/** Apex hosts whose every subdomain is allowed over HTTPS (https://*.city777.shop). */
-const wildcardApexHosts = ['city777.shop'];
+/** Apex hosts whose every subdomain is allowed over HTTPS (https://*.banglajackpot.online). */
+const wildcardApexHosts = ['banglajackpot.online'];
 
 function hostMatchesApex(hostname: string, apex: string): boolean {
   return hostname === apex || hostname.endsWith(`.${apex}`);

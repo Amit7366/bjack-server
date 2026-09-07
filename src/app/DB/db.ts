@@ -11,6 +11,7 @@ export const connectDB = async () => {
     console.log('🧪 Connecting to MongoDB at:', config.database_url);
 
     await mongoose.connect(config.database_url as string, {
+      dbName: config.database_name,
       serverSelectionTimeoutMS: 20000, // wait 20s for Atlas to respond
       socketTimeoutMS: 45000,
     });

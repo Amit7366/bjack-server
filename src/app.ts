@@ -44,9 +44,9 @@ app.use(
         connectSrc: [
           "'self'",
           'https://www.google-analytics.com',
-          'https://city777.shop',
-          'https://api.city777.shop',
-          'wss://api.city777.shop',
+          'https://banglajackpot.online',
+          'https://api.banglajackpot.online',
+          'wss://api.banglajackpot.online',
         ],
         frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.google.com'],
         objectSrc: ["'none'"],

@@ -10,7 +10,9 @@ async function addSpinFields() {
   try {
     if (!MONGO_URI) throw new Error("Missing DATABASE_URL in .env");
 
-    await mongoose.connect(MONGO_URI);
+    await mongoose.connect(MONGO_URI, {
+      dbName: process.env.DATABASE_NAME || "banglajackpot",
+    });
     console.log("✅ Connected to MongoDB Atlas");
 
     /**

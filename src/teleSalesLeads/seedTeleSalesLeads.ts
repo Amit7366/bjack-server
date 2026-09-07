@@ -7,7 +7,9 @@ dotenv.config();
 
 const seedTeleSalesLeads = async () => {
   try {
-    await mongoose.connect(process.env.DATABASE_URL!);
+    await mongoose.connect(process.env.DATABASE_URL!, {
+      dbName: process.env.DATABASE_NAME || 'banglajackpot',
+    });
     console.log('✅ Connected to MongoDB');
 
     // Clear old data (optional)

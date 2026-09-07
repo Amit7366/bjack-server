@@ -15,7 +15,9 @@ let server: http.Server | null = null;
 
 async function connectDB() {
   if (isConnected) return;
-  await mongoose.connect(config.database_url as string);
+  await mongoose.connect(config.database_url as string, {
+    dbName: config.database_name,
+  });
   await seedSuperAdmin();
   isConnected = true;
   console.log('✅ MongoDB connected');

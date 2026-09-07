@@ -21,7 +21,9 @@ const runMigration = async (): Promise<void> => {
   console.log("🚀 Starting migration and indexing...");
 
   // Connect to MongoDB
-  await mongoose.connect(MONGO_URI);
+  await mongoose.connect(MONGO_URI, {
+    dbName: process.env.DATABASE_NAME || "banglajackpot",
+  });
   console.log("✅ Connected to MongoDB");
 
   const db = mongoose.connection.db;
